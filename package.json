@@ -1,0 +1,44 @@
+{
+  "name": "ira-backend",
+  "version": "1.0.0",
+  "description": "IRA Investment Research Backend API built with Hono",
+  "main": "src/app.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicochen26/ira-backend.git"
+  },
+  "keywords": [
+    "api",
+    "backend",
+    "investment",
+    "research",
+    "hono"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nicochen26/ira-backend/issues"
+  },
+  "homepage": "https://github.com/nicochen26/ira-backend#readme",
+  "dependencies": {
+    "@hono/node-server": "^1.19.4",
+    "dotenv": "^17.2.2",
+    "hono": "^4.9.8"
+  },
+  "devDependencies": {
+    "eslint": "^9.36.0",
+    "jest": "^30.1.3",
+    "nodemon": "^3.1.10"
+  }
+}
