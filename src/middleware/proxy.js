@@ -1,4 +1,4 @@
-const { getActiveAgent } = require('../config/agents');
+const { getServiceByPath } = require('../config/agents');
 
 const createProxyMiddleware = () => {
   return async (c, next) => {
@@ -10,12 +10,18 @@ const createProxyMiddleware = () => {
     }
 
     try {
-      // Get active agent configuration
-      const activeAgent = getActiveAgent();
-      const targetUrl = new URL(activeAgent.url);
+      // Get service configuration based on path
+      const service = getServiceByPath(path);
 
-      // Build the target URL with the original path
-      const proxyUrl = `${activeAgent.url}${path}`;
+      if (!service) {
+        // No matching service found, continue to next middleware
+        return next();
+      }
+
+      const targetUrl = new URL(service.url);
+
+      // Build the target URL with the transformed path (prefix removed)
+      const proxyUrl = `${service.url}${service.targetPath}`;
 
       // Get original request details
       const method = c.req.method;
@@ -45,7 +51,7 @@ const createProxyMiddleware = () => {
       const finalUrl = searchParams ? `${proxyUrl}?${searchParams}` : proxyUrl;
 
       // Log the proxy request
-      console.log(`[PROXY] ${method} ${path} -> ${finalUrl}`);
+      console.log(`[PROXY] ${method} ${path} -> ${service.name} (${finalUrl})`);
 
       // Make the proxy request
       const response = await fetch(finalUrl, {

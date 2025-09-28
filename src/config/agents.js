@@ -15,25 +15,25 @@ const config = {
 
 const getAgentConfig = () => {
   return {
-    agents: {
-      'invest-research': {
-        name: 'Invest Research Agent',
-        url: process.env.INVEST_RESEARCH_AGENT_URL,
+    services: {
+      'ira': {
+        name: 'IRA Service',
+        url: process.env.IRA_BASE_URL,
+        pathPrefix: '/api/ira'
       },
-      'hemera': {
-        name: 'Hemera Agent',
-        url: process.env.HEMERA_AGENT_URL,
+      'hap': {
+        name: 'HAP Service',
+        url: process.env.HAP_BASE_URL,
+        pathPrefix: '/api/hap'
       }
-    },
-    activeAgent: process.env.ACTIVE_AGENT
+    }
   };
 };
 
 const validateAgentConfig = () => {
   const requiredEnvVars = [
-    'INVEST_RESEARCH_AGENT_URL',
-    'HEMERA_AGENT_URL',
-    'ACTIVE_AGENT'
+    'IRA_BASE_URL',
+    'HAP_BASE_URL'
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -42,35 +42,42 @@ const validateAgentConfig = () => {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
 
-  const validAgents = ['invest-research', 'hemera'];
-  const activeAgent = process.env.ACTIVE_AGENT;
-  if (!validAgents.includes(activeAgent)) {
-    throw new Error(`Invalid ACTIVE_AGENT value: ${activeAgent}. Must be one of: ${validAgents.join(', ')}`);
-  }
-
   // Validate URLs are properly formatted
   const agentConfig = getAgentConfig();
-  Object.entries(agentConfig.agents).forEach(([key, agent]) => {
+  Object.entries(agentConfig.services).forEach(([key, service]) => {
     try {
-      new URL(agent.url);
+      new URL(service.url);
     } catch (error) {
-      throw new Error(`Invalid URL for ${agent.name}: ${agent.url}`);
+      throw new Error(`Invalid URL for ${service.name}: ${service.url}`);
     }
   });
 
   return true;
 };
 
-const getActiveAgent = () => {
+// Get service by path prefix
+const getServiceByPath = (path) => {
   validateAgentConfig();
   const agentConfig = getAgentConfig();
-  const activeAgentKey = agentConfig.activeAgent;
-  return agentConfig.agents[activeAgentKey];
+
+  // Find matching service by path prefix
+  for (const [key, service] of Object.entries(agentConfig.services)) {
+    if (path.startsWith(service.pathPrefix)) {
+      return {
+        key,
+        ...service,
+        // Remove the prefix from the path for forwarding
+        targetPath: path.replace(service.pathPrefix, '')
+      };
+    }
+  }
+
+  return null;
 };
 
-const getAllAgents = () => {
+const getAllServices = () => {
   const agentConfig = getAgentConfig();
-  return agentConfig.agents;
+  return agentConfig.services;
 };
 
 const currentEnv = process.env.NODE_ENV || 'development';
@@ -79,6 +86,6 @@ module.exports = {
   ...config[currentEnv],
   getAgentConfig,
   validateAgentConfig,
-  getActiveAgent,
-  getAllAgents
+  getServiceByPath,
+  getAllServices
 };

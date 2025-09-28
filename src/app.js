@@ -30,10 +30,13 @@ app.use('*', createProxyMiddleware());
 
 // Routes
 const apiRoutes = require('./routes/api');
+const exampleRoutes = require('./routes/examples');
+
 app.route('/api', apiRoutes);
+app.route('/api', exampleRoutes);
 
 // Health check endpoint
-const { getAllAgents } = require('./config/agents');
+const { getAllServices } = require('./config/agents');
 
 app.get('/health', async (c) => {
   const baseHealth = {
@@ -43,16 +46,16 @@ app.get('/health', async (c) => {
   };
 
   try {
-    // Get all configured agents
-    const allAgents = getAllAgents();
+    // Get all configured services
+    const allServices = getAllServices();
 
-    // Check connectivity to all agents
-    const agentChecks = await Promise.allSettled(
-      Object.entries(allAgents).map(async ([key, agent]) => {
+    // Check connectivity to all services
+    const serviceChecks = await Promise.allSettled(
+      Object.entries(allServices).map(async ([key, service]) => {
         const startTime = Date.now();
         try {
-          // Try to connect to agent's health endpoint (assume /health)
-          const response = await fetch(`${agent.url}/health`, {
+          // Try to connect to service's health endpoint (assume /health)
+          const response = await fetch(`${service.url}/health`, {
             method: 'GET',
             timeout: 5000, // 5 second timeout
             headers: {
@@ -63,36 +66,45 @@ app.get('/health', async (c) => {
           const duration = Date.now() - startTime;
 
           return {
-            name: key,
-            url: agent.url,
+            name: service.name,
+            key: key,
+            url: service.url,
+            pathPrefix: service.pathPrefix,
             status: response.ok ? 'healthy' : 'unhealthy',
             httpStatus: response.status,
-            responseTime: duration,
-            isActive: key === process.env.ACTIVE_AGENT
+            responseTime: duration
           };
         } catch (error) {
           const duration = Date.now() - startTime;
           return {
-            name: key,
-            url: agent.url,
+            name: service.name,
+            key: key,
+            url: service.url,
+            pathPrefix: service.pathPrefix,
             status: 'unreachable',
             error: error.message,
-            responseTime: duration,
-            isActive: key === process.env.ACTIVE_AGENT
+            responseTime: duration
           };
         }
       })
     );
 
     // Process the results
-    const agents = agentChecks.map(result => result.value || result.reason);
-    const hasUnhealthyAgents = agents.some(agent => agent.status !== 'healthy');
+    const services = serviceChecks.map(result => result.value || result.reason);
+    const hasUnhealthyServices = services.some(service => service.status !== 'healthy');
 
     return c.json({
       ...baseHealth,
-      status: hasUnhealthyAgents ? 'DEGRADED' : 'OK',
-      agents,
-      activeAgent: process.env.ACTIVE_AGENT
+      status: hasUnhealthyServices ? 'DEGRADED' : 'OK',
+      services,
+      routingInfo: {
+        description: 'Automatic path-based routing',
+        routes: Object.entries(allServices).map(([key, service]) => ({
+          path: `${service.pathPrefix}/*`,
+          service: service.name,
+          target: service.url
+        }))
+      }
     });
 
   } catch (error) {
@@ -101,9 +113,8 @@ app.get('/health', async (c) => {
     return c.json({
       ...baseHealth,
       status: 'ERROR',
-      error: 'Failed to check agent connectivity',
-      agents: [],
-      activeAgent: process.env.ACTIVE_AGENT
+      error: 'Failed to check service connectivity',
+      services: []
     });
   }
 });
