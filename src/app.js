@@ -1,5 +1,7 @@
 const { Hono } = require('hono');
 const { serve } = require('@hono/node-server');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 // Validate agent configuration on startup
@@ -37,6 +39,7 @@ app.use('*', createProxyMiddleware());
 
 // Routes
 const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/auth');
 const exampleRoutes = require('./routes/examples');
 const threadsRoutes = require('./routes/threads');
 const userRoutes = require('./routes/users');
@@ -45,12 +48,34 @@ const teamsRoutes = require('./routes/teams');
 const searchRoutes = require('./routes/search');
 
 app.route('/api', apiRoutes);
+app.route('/api/auth', authRoutes);
 app.route('/api', exampleRoutes);
 app.route('/api', threadsRoutes);
 app.route('/api/users', userRoutes);
 app.route('/api/protected', protectedRoutes);
 app.route('/api/teams', teamsRoutes);
 app.route('/api/search', searchRoutes);
+
+// Static file serving for debug interface
+app.get('/', async (c) => {
+  try {
+    const filePath = path.join(__dirname, '..', 'public', 'index.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    return c.html(content);
+  } catch (error) {
+    return c.text('Debug interface not found', 404);
+  }
+});
+
+app.get('/debug', async (c) => {
+  try {
+    const filePath = path.join(__dirname, '..', 'public', 'index.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    return c.html(content);
+  } catch (error) {
+    return c.text('Debug interface not found', 404);
+  }
+});
 
 // Health check endpoint
 const { getAllServices } = require('./config/agents');

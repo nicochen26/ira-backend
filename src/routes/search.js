@@ -1,12 +1,12 @@
 const { Hono } = require('hono');
 const { searchService, SearchNotFoundError, SearchValidationError, SearchServiceError } = require('../services/searchService');
-const { jwtAuthMiddleware } = require('../middleware/auth');
+const { localJwtAuthMiddleware } = require('../middleware/localAuth');
 const { PaginationValidationError } = require('../utils/pagination');
 const { getSSeManager } = require('../sse/sseManager');
 
 const search = new Hono();
 
-search.use('/*', jwtAuthMiddleware());
+search.use('/*', localJwtAuthMiddleware());
 
 /**
  * POST /api/search/stream

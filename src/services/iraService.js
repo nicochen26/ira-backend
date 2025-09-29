@@ -21,7 +21,7 @@ class IRAService {
    */
   async createThread(authToken, metadata = {}) {
     try {
-      const response = await fetch(`${this.baseURL}/_ira/threads`, {
+      const response = await fetch(`${this.baseURL}/threads`, {
         method: 'POST',
         headers: {
           'Accept': '*/*',
