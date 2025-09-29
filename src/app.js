@@ -41,12 +41,14 @@ const exampleRoutes = require('./routes/examples');
 const threadsRoutes = require('./routes/threads');
 const userRoutes = require('./routes/users');
 const protectedRoutes = require('./routes/protected');
+const teamsRoutes = require('./routes/teams');
 
 app.route('/api', apiRoutes);
 app.route('/api', exampleRoutes);
 app.route('/api', threadsRoutes);
 app.route('/api/users', userRoutes);
 app.route('/api/protected', protectedRoutes);
+app.route('/api/teams', teamsRoutes);
 
 // Health check endpoint
 const { getAllServices } = require('./config/agents');
