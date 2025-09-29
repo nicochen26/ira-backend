@@ -25,11 +25,6 @@ const getAgentConfig = () => {
         name: 'HAP Service',
         url: process.env.HAP_BASE_URL,
         pathPrefix: '/api/hap'
-      },
-      'auth': {
-        name: 'Auth Service',
-        url: process.env.AUTH_BASE_URL,
-        pathPrefix: '/api/auth'
       }
     }
   };
@@ -39,7 +34,6 @@ const validateAgentConfig = () => {
   const requiredEnvVars = [
     'IRA_BASE_URL',
     'HAP_BASE_URL',
-    'AUTH_BASE_URL',
     'JWT_SECRET'
   ];
 

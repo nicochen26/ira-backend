@@ -38,14 +38,12 @@ app.use('*', createProxyMiddleware());
 // Routes
 const apiRoutes = require('./routes/api');
 const exampleRoutes = require('./routes/examples');
-const authRoutes = require('./routes/auth');
 const threadsRoutes = require('./routes/threads');
 const userRoutes = require('./routes/users');
 const protectedRoutes = require('./routes/protected');
 
 app.route('/api', apiRoutes);
 app.route('/api', exampleRoutes);
-app.route('/api', authRoutes);
 app.route('/api', threadsRoutes);
 app.route('/api/users', userRoutes);
 app.route('/api/protected', protectedRoutes);

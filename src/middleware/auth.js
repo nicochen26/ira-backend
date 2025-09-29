@@ -1,14 +1,14 @@
-const jwtUtil = require('../utils/jwt');
+const { getServiceByPath } = require('../config/agents');
 
 /**
  * JWT Authentication Middleware
- * Verifies JWT tokens and adds user information to the context
+ * Verifies JWT tokens via backend service and adds user information to the context
  */
 const jwtAuthMiddleware = () => {
   return async (c, next) => {
     try {
       const authHeader = c.req.header('Authorization');
-      const token = jwtUtil.extractTokenFromHeader(authHeader);
+      const token = extractTokenFromHeader(authHeader);
 
       if (!token) {
         return c.json({
@@ -18,20 +18,22 @@ const jwtAuthMiddleware = () => {
         }, 401);
       }
 
-      // Verify token and extract user information
-      const decoded = jwtUtil.verifyToken(token);
+      // Verify token with backend service
+      const verificationResult = await verifyTokenWithBackend(token);
+
+      if (!verificationResult.success || !verificationResult.valid) {
+        return c.json({
+          success: false,
+          error: 'Unauthorized',
+          message: verificationResult.error || 'Invalid token'
+        }, 401);
+      }
 
       // Add user information to context for use in subsequent handlers
-      c.set('user', {
-        id: decoded.id,
-        email: decoded.email,
-        name: decoded.name,
-        iat: decoded.iat,
-        exp: decoded.exp
-      });
+      c.set('user', verificationResult.user);
 
       // Add token expiry warning if close to expiring
-      if (jwtUtil.isTokenExpiringSoon(decoded)) {
+      if (verificationResult.expiringSoon) {
         c.set('tokenExpiringSoon', true);
       }
 
@@ -44,7 +46,7 @@ const jwtAuthMiddleware = () => {
       return c.json({
         success: false,
         error: 'Unauthorized',
-        message: error.message || 'Invalid token'
+        message: 'Authentication service unavailable'
       }, 401);
     }
   };
@@ -58,24 +60,20 @@ const optionalJwtAuthMiddleware = () => {
   return async (c, next) => {
     try {
       const authHeader = c.req.header('Authorization');
-      const token = jwtUtil.extractTokenFromHeader(authHeader);
+      const token = extractTokenFromHeader(authHeader);
 
       if (token) {
         try {
-          const decoded = jwtUtil.verifyToken(token);
+          const verificationResult = await verifyTokenWithBackend(token);
 
-          // Add user information to context
-          c.set('user', {
-            id: decoded.id,
-            email: decoded.email,
-            name: decoded.name,
-            iat: decoded.iat,
-            exp: decoded.exp
-          });
+          if (verificationResult.success && verificationResult.valid) {
+            // Add user information to context
+            c.set('user', verificationResult.user);
 
-          // Add token expiry warning if close to expiring
-          if (jwtUtil.isTokenExpiringSoon(decoded)) {
-            c.set('tokenExpiringSoon', true);
+            // Add token expiry warning if close to expiring
+            if (verificationResult.expiringSoon) {
+              c.set('tokenExpiringSoon', true);
+            }
           }
         } catch (error) {
           // Log error but don't fail the request
@@ -144,6 +142,54 @@ const requireRoles = (allowedRoles = []) => {
     await next();
   };
 };
+
+/**
+ * Extract JWT token from Authorization header
+ * @param {string} authHeader - The Authorization header value
+ * @returns {string|null} - The extracted token or null if not found
+ */
+function extractTokenFromHeader(authHeader) {
+  if (!authHeader) {
+    return null;
+  }
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return null;
+  }
+
+  return parts[1];
+}
+
+/**
+ * Verify token with backend service
+ * @param {string} token - The JWT token to verify
+ * @returns {Object} - Verification result from backend service
+ */
+async function verifyTokenWithBackend(token) {
+  const service = getServiceByPath('/api/ira/auth/verify-token');
+  if (!service) {
+    throw new Error('Backend verification service not configured');
+  }
+
+  const targetUrl = `${service.url}/auth/verify-token`;
+
+  const response = await fetch(targetUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({ token }),
+    timeout: 10000 // 10 second timeout
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend verification service returned ${response.status}`);
+  }
+
+  return await response.json();
+}
 
 module.exports = {
   jwtAuthMiddleware,

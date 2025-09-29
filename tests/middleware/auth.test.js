@@ -1,5 +1,7 @@
 const { jwtAuthMiddleware, optionalJwtAuthMiddleware, getCurrentUser, isAuthenticated } = require('../../src/middleware/auth');
-const jwtUtil = require('../../src/utils/jwt');
+
+// Mock fetch for backend service calls
+global.fetch = jest.fn();
 
 describe('JWT Authentication Middleware', () => {
   let mockContext;
@@ -15,27 +17,44 @@ describe('JWT Authentication Middleware', () => {
       get: jest.fn()
     };
     mockNext = jest.fn();
+    fetch.mockClear();
   });
 
   describe('jwtAuthMiddleware', () => {
-    test('should authenticate with valid token', async () => {
+    test('should authenticate with valid token via backend service', async () => {
       const testUser = {
         id: 'test-123',
         email: 'test@example.com',
         name: 'Test User'
       };
 
-      const token = jwtUtil.generateToken(testUser);
+      const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.test.signature';
       mockContext.req.header.mockReturnValue(`Bearer ${token}`);
+
+      // Mock successful backend verification
+      const mockVerifyResponse = {
+        success: true,
+        valid: true,
+        user: testUser,
+        expiringSoon: false
+      };
+
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockVerifyResponse)
+      });
 
       const middleware = jwtAuthMiddleware();
       await middleware(mockContext, mockNext);
 
-      expect(mockContext.set).toHaveBeenCalledWith('user', expect.objectContaining({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name
-      }));
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/verify-token'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ token })
+        })
+      );
+      expect(mockContext.set).toHaveBeenCalledWith('user', testUser);
       expect(mockNext).toHaveBeenCalled();
       expect(mockContext.json).not.toHaveBeenCalled();
     });
@@ -57,13 +76,25 @@ describe('JWT Authentication Middleware', () => {
     test('should reject request with invalid token', async () => {
       mockContext.req.header.mockReturnValue('Bearer invalid-token');
 
+      // Mock backend service rejection
+      const mockErrorResponse = {
+        success: false,
+        valid: false,
+        error: 'Invalid token'
+      };
+
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockErrorResponse)
+      });
+
       const middleware = jwtAuthMiddleware();
       await middleware(mockContext, mockNext);
 
       expect(mockContext.json).toHaveBeenCalledWith({
         success: false,
         error: 'Unauthorized',
-        message: expect.stringContaining('Invalid token')
+        message: 'Invalid token'
       }, 401);
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -83,44 +114,83 @@ describe('JWT Authentication Middleware', () => {
     });
 
     test('should detect token expiring soon', async () => {
-      // Create a token that will be detected as expiring soon
-      // Note: This test might be flaky due to timing, but demonstrates the concept
       const testUser = {
         id: 'test-123',
         email: 'test@example.com',
         name: 'Test User'
       };
 
-      const token = jwtUtil.generateToken(testUser);
+      const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.expiring.signature';
       mockContext.req.header.mockReturnValue(`Bearer ${token}`);
+
+      // Mock backend response with expiring token warning
+      const mockVerifyResponse = {
+        success: true,
+        valid: true,
+        user: testUser,
+        expiringSoon: true
+      };
+
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockVerifyResponse)
+      });
 
       const middleware = jwtAuthMiddleware();
       await middleware(mockContext, mockNext);
 
-      expect(mockContext.set).toHaveBeenCalledWith('user', expect.any(Object));
+      expect(mockContext.set).toHaveBeenCalledWith('user', testUser);
+      expect(mockContext.set).toHaveBeenCalledWith('tokenExpiringSoon', true);
       expect(mockNext).toHaveBeenCalled();
+    });
+
+    test('should handle backend service error', async () => {
+      const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.test.signature';
+      mockContext.req.header.mockReturnValue(`Bearer ${token}`);
+
+      // Mock fetch error
+      fetch.mockRejectedValueOnce(new Error('Service unavailable'));
+
+      const middleware = jwtAuthMiddleware();
+      await middleware(mockContext, mockNext);
+
+      expect(mockContext.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Unauthorized',
+        message: 'Authentication service unavailable'
+      }, 401);
+      expect(mockNext).not.toHaveBeenCalled();
     });
   });
 
   describe('optionalJwtAuthMiddleware', () => {
-    test('should authenticate with valid token', async () => {
+    test('should authenticate with valid token via backend service', async () => {
       const testUser = {
         id: 'test-123',
         email: 'test@example.com',
         name: 'Test User'
       };
 
-      const token = jwtUtil.generateToken(testUser);
+      const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.test.signature';
       mockContext.req.header.mockReturnValue(`Bearer ${token}`);
+
+      // Mock successful backend verification
+      const mockVerifyResponse = {
+        success: true,
+        valid: true,
+        user: testUser,
+        expiringSoon: false
+      };
+
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockVerifyResponse)
+      });
 
       const middleware = optionalJwtAuthMiddleware();
       await middleware(mockContext, mockNext);
 
-      expect(mockContext.set).toHaveBeenCalledWith('user', expect.objectContaining({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name
-      }));
+      expect(mockContext.set).toHaveBeenCalledWith('user', testUser);
       expect(mockNext).toHaveBeenCalled();
       expect(mockContext.json).not.toHaveBeenCalled();
     });
@@ -139,11 +209,15 @@ describe('JWT Authentication Middleware', () => {
     test('should continue with invalid token (no error)', async () => {
       mockContext.req.header.mockReturnValue('Bearer invalid-token');
 
+      // Mock backend service error
+      fetch.mockRejectedValueOnce(new Error('Invalid token'));
+
       const middleware = optionalJwtAuthMiddleware();
       await middleware(mockContext, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
       expect(mockContext.json).not.toHaveBeenCalled();
+      expect(mockContext.set).not.toHaveBeenCalledWith('user', expect.any(Object));
     });
   });
 
