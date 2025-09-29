@@ -81,6 +81,12 @@ const getAllServices = () => {
   return agentConfig.services;
 };
 
+// Get service by key
+const getServiceByKey = (key) => {
+  const agentConfig = getAgentConfig();
+  return agentConfig.services[key.toLowerCase()];
+};
+
 const currentEnv = process.env.NODE_ENV || 'development';
 
 module.exports = {
@@ -88,5 +94,6 @@ module.exports = {
   getAgentConfig,
   validateAgentConfig,
   getServiceByPath,
-  getAllServices
+  getAllServices,
+  getServiceByKey
 };

@@ -24,6 +24,10 @@ model User {
   ownedTeams  Team[]       @relation("TeamOwner")
   teamMembers TeamMember[]
 
+  // Search relationships
+  searchQueries  SearchQuery[]
+  searchResults  SearchResult[]
+
   @@map("users")
 }
 
@@ -55,4 +59,41 @@ model TeamMember {
 
   @@unique([teamId, userId])
   @@map("team_members")
+}
+
+model SearchQuery {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  query     String
+  filters   Json?    // Store search filters as JSON
+  metadata  Json?    // Store IRA-specific metadata
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results SearchResult[]
+
+  @@map("search_queries")
+}
+
+model SearchResult {
+  id            String   @id @default(cuid())
+  queryId       String   @map("query_id")
+  userId        String   @map("user_id")
+  threadId      String?  @map("thread_id") // IRA thread ID
+  title         String
+  content       String   @db.Text
+  score         Float?   // Search relevance score
+  metadata      Json?    // Store thread metadata from IRA
+  sourceService String   @default("ira") @map("source_service") // "ira" or "hap"
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  query SearchQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([threadId])
+  @@map("search_results")
 }

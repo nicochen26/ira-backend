@@ -180,8 +180,7 @@ async function verifyTokenWithBackend(token) {
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     },
-    body: JSON.stringify({ token }),
-    timeout: 10000 // 10 second timeout
+    body: JSON.stringify({ token })
   });
 
   if (!response.ok) {

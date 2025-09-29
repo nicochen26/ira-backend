@@ -42,6 +42,7 @@ const threadsRoutes = require('./routes/threads');
 const userRoutes = require('./routes/users');
 const protectedRoutes = require('./routes/protected');
 const teamsRoutes = require('./routes/teams');
+const searchRoutes = require('./routes/search');
 
 app.route('/api', apiRoutes);
 app.route('/api', exampleRoutes);
@@ -49,6 +50,7 @@ app.route('/api', threadsRoutes);
 app.route('/api/users', userRoutes);
 app.route('/api/protected', protectedRoutes);
 app.route('/api/teams', teamsRoutes);
+app.route('/api/search', searchRoutes);
 
 // Health check endpoint
 const { getAllServices } = require('./config/agents');
@@ -75,7 +77,6 @@ app.get('/health', async (c) => {
           // Try to connect to service's health endpoint (assume /health)
           const response = await fetch(`${service.url}/health`, {
             method: 'GET',
-            timeout: 5000, // 5 second timeout
             headers: {
               'Accept': 'application/json'
             }
