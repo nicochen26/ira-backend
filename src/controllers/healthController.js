@@ -1,4 +1,8 @@
-const getHealth = (c) => {
+const dbClient = require('../db/client');
+
+const getHealth = async (c) => {
+  const dbHealth = await dbClient.healthCheck();
+
   return c.json({
     success: true,
     data: {
@@ -6,7 +10,8 @@ const getHealth = (c) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      version: process.version
+      version: process.version,
+      database: dbHealth
     }
   });
 };

@@ -11,6 +11,13 @@ try {
   process.exit(1);
 }
 
+// Initialize database connection (non-blocking)
+const dbClient = require('./db/client');
+dbClient.connect().catch(error => {
+  console.error('Database initialization failed:', error.message);
+  console.log('Application will continue running with degraded database functionality');
+});
+
 const app = new Hono();
 const PORT = process.env.PORT || 3000;
 
@@ -33,11 +40,13 @@ const apiRoutes = require('./routes/api');
 const exampleRoutes = require('./routes/examples');
 const authRoutes = require('./routes/auth');
 const threadsRoutes = require('./routes/threads');
+const userRoutes = require('./routes/users');
 
 app.route('/api', apiRoutes);
 app.route('/api', exampleRoutes);
 app.route('/api', authRoutes);
 app.route('/api', threadsRoutes);
+app.route('/api/users', userRoutes);
 
 // Health check endpoint
 const { getAllServices } = require('./config/agents');
@@ -50,6 +59,9 @@ app.get('/health', async (c) => {
   };
 
   try {
+    // Check database health
+    const dbHealth = await dbClient.healthCheck();
+
     // Get all configured services
     const allServices = getAllServices();
 
@@ -96,10 +108,12 @@ app.get('/health', async (c) => {
     // Process the results
     const services = serviceChecks.map(result => result.value || result.reason);
     const hasUnhealthyServices = services.some(service => service.status !== 'healthy');
+    const isDatabaseUnhealthy = dbHealth.status !== 'healthy';
 
     return c.json({
       ...baseHealth,
-      status: hasUnhealthyServices ? 'DEGRADED' : 'OK',
+      status: (hasUnhealthyServices || isDatabaseUnhealthy) ? 'DEGRADED' : 'OK',
+      database: dbHealth,
       services,
       routingInfo: {
         description: 'Automatic path-based routing',
@@ -118,7 +132,8 @@ app.get('/health', async (c) => {
       ...baseHealth,
       status: 'ERROR',
       error: 'Failed to check service connectivity',
-      services: []
+      services: [],
+      database: { status: 'error', error: 'Health check failed' }
     });
   }
 });
