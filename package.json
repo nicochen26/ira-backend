@@ -43,6 +43,7 @@
     "dotenv": "^17.2.2",
     "hono": "^4.9.8",
     "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^2.7.0",
     "prisma": "^6.16.2"
   },
   "devDependencies": {

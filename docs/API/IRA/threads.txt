@@ -1,0 +1,18 @@
+curl 'http://localhost:2024/_ira/threads' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en,zh-CN;q=0.9,zh;q=0.8,zh-TW;q=0.7' \
+  -H 'Connection: keep-alive' \
+  -H 'Origin: http://localhost:3000' \
+  -H 'Referer: http://localhost:3000/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \
+  -H 'authorization: Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwOThhYzA1OC03NzhlLTRkZmUtODFkNy03Mzk3Y2IzNjRjZDgiLCJlbWFpbCI6ImFiY2RAeC5jb20iLCJpYXQiOjE3NTkxMTE4ODAsImV4cCI6MTc2Njg4Nzg4MH0.9gKMhg7Ut61H5-J-w4UH2Xe5mkBUnywXNkqkqiwYzthow4RCc0UrtqMSFOKYkuHWGnlbH0BrlspPhZBFM3UEVw' \
+  -H 'content-type: application/json' \
+  -H 'sec-ch-ua: "Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  --data-raw '{"metadata":{}}'
+
+  {"thread_id":"693c6a9b-6ebd-41aa-876b-fc011b48a18a","created_at":"2025-09-29T09:25:03.949Z","updated_at":"2025-09-29T09:25:03.949Z","metadata":{"user_id":"098ac058-778e-4dfe-81d7-7397cb364cd8"},"status":"idle","config":{}}

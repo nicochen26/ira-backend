@@ -2,10 +2,168 @@ const { Hono } = require('hono');
 const { searchService, SearchNotFoundError, SearchValidationError, SearchServiceError } = require('../services/searchService');
 const { jwtAuthMiddleware } = require('../middleware/auth');
 const { PaginationValidationError } = require('../utils/pagination');
+const { getSSeManager } = require('../sse/sseManager');
 
 const search = new Hono();
 
 search.use('/*', jwtAuthMiddleware());
+
+/**
+ * POST /api/search/stream
+ * Perform a streaming search using IRA backend service with two-step flow
+ */
+search.post('/stream', async (c) => {
+  try {
+    const user = c.get('user');
+    const authToken = c.req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!authToken) {
+      return c.json({
+        success: false,
+        error: 'Authentication token required'
+      }, 401);
+    }
+
+    const searchParams = await c.req.json();
+
+    // Validate required fields
+    if (!searchParams.query) {
+      return c.json({
+        success: false,
+        error: 'Search query is required'
+      }, 400);
+    }
+
+    const searchResults = await searchService.performStreamingSearch(
+      searchParams,
+      user.id,
+      authToken
+    );
+
+    return c.json({
+      success: true,
+      data: searchResults
+    }, 200);
+
+  } catch (error) {
+    if (error instanceof SearchValidationError) {
+      return c.json({
+        success: false,
+        error: error.message
+      }, 400);
+    }
+
+    if (error instanceof SearchServiceError) {
+      return c.json({
+        success: false,
+        error: error.message
+      }, 503);
+    }
+
+    console.error('Streaming search endpoint error:', error);
+    return c.json({
+      success: false,
+      error: 'Streaming search operation failed'
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/search/stream/:searchId
+ * Establish SSE connection for real-time search results
+ */
+search.get('/stream/:searchId', async (c) => {
+  try {
+    const user = c.get('user');
+    const searchId = c.req.param('searchId');
+
+    // Verify search ownership
+    const searchQuery = await searchService.getSearchById(searchId, user.id);
+
+    // Get SSE manager
+    const sseManager = getSSeManager();
+
+    // Set SSE headers
+    c.header('Content-Type', 'text/event-stream');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Connection', 'keep-alive');
+    c.header('Access-Control-Allow-Origin', '*');
+    c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    c.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+
+    // Create a custom response that keeps the connection open
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          // Create SSE connection with the controller
+          const connection = sseManager.addConnection(searchId, user.id, {
+            write: (data) => {
+              try {
+                controller.enqueue(new TextEncoder().encode(data));
+              } catch (error) {
+                console.error('SSE write error:', error);
+              }
+            },
+            end: () => {
+              try {
+                controller.close();
+              } catch (error) {
+                console.error('SSE close error:', error);
+              }
+            },
+            on: (event, callback) => {
+              // Mock response events for compatibility
+              if (event === 'close') {
+                // Handle client disconnect
+              }
+            }
+          });
+
+          // Store connection reference for cleanup
+          c.set('sseConnection', connection);
+        },
+        cancel() {
+          const connection = c.get('sseConnection');
+          if (connection) {
+            sseManager.removeConnection(connection);
+          }
+        }
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS'
+        }
+      }
+    );
+
+  } catch (error) {
+    if (error instanceof SearchNotFoundError) {
+      return c.json({
+        success: false,
+        error: error.message
+      }, 404);
+    }
+
+    if (error instanceof SearchValidationError) {
+      return c.json({
+        success: false,
+        error: error.message
+      }, 400);
+    }
+
+    console.error('SSE stream endpoint error:', error);
+    return c.json({
+      success: false,
+      error: 'Failed to establish stream connection'
+    }, 500);
+  }
+});
 
 /**
  * POST /api/search

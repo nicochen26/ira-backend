@@ -2,6 +2,7 @@ const dbClient = require('../db/client');
 const { getServiceByKey } = require('../config/agents');
 const { searchCache, generateSearchCacheKey, cacheSearchResults } = require('../utils/cache');
 const { createPaginationResponse, parseQueryParams } = require('../utils/pagination');
+const { getSearchStreamService } = require('./searchStreamService');
 
 class SearchNotFoundError extends Error {
   constructor(searchId) {
@@ -690,6 +691,120 @@ const searchService = {
         filters: filters
       }
     );
+  },
+
+  /**
+   * Perform streaming search using IRA backend service with two-step flow
+   * @param {Object} searchParams - Search parameters
+   * @param {string} searchParams.query - Search query string
+   * @param {Object} searchParams.filters - Optional search filters
+   * @param {Object} searchParams.metadata - IRA-specific metadata
+   * @param {string} userId - User ID performing the search
+   * @param {string} authToken - User's JWT token for IRA authentication
+   * @returns {Promise<Object>} Search initialization result with searchId
+   */
+  async performStreamingSearch(searchParams, userId, authToken) {
+    const prisma = dbClient.getClient();
+
+    // Validate inputs
+    if (!searchParams.query || !searchParams.query.trim()) {
+      throw new SearchValidationError('Search query is required');
+    }
+
+    if (!userId) {
+      throw new SearchValidationError('User ID is required');
+    }
+
+    if (!authToken) {
+      throw new SearchValidationError('Authentication token is required');
+    }
+
+    try {
+      // Store search query with INITIATED status
+      const searchQuery = await prisma.searchQuery.create({
+        data: {
+          userId: userId,
+          query: searchParams.query.trim(),
+          filters: searchParams.filters || null,
+          metadata: {
+            ...searchParams.metadata,
+            status: 'INITIATED',
+            streamingEnabled: true,
+            initiatedAt: new Date().toISOString()
+          }
+        }
+      });
+
+      // Start streaming search using the search stream service
+      const streamService = getSearchStreamService();
+      const streamResult = await streamService.startStreamSearch(
+        searchQuery.id,
+        userId,
+        authToken,
+        searchParams.query.trim(),
+        searchParams.metadata
+      );
+
+      return {
+        queryId: searchQuery.id,
+        query: searchParams.query.trim(),
+        status: 'INITIATED',
+        streaming: true,
+        threadId: streamResult.threadId,
+        message: 'Streaming search initiated successfully'
+      };
+
+    } catch (error) {
+      // If it's already one of our custom errors, re-throw
+      if (error instanceof SearchValidationError ||
+          error instanceof SearchServiceError) {
+        throw error;
+      }
+
+      // Log unexpected errors and throw a generic service error
+      console.error('Unexpected streaming search error:', error);
+      throw new SearchServiceError('Streaming search operation failed');
+    }
+  },
+
+  /**
+   * Get search by ID with ownership verification
+   * @param {string} searchId - Search ID
+   * @param {string} userId - User ID (for ownership verification)
+   * @returns {Promise<Object>} Search query data
+   */
+  async getSearchById(searchId, userId) {
+    const prisma = dbClient.getClient();
+
+    if (!searchId) {
+      throw new SearchValidationError('Search ID is required');
+    }
+
+    const searchQuery = await prisma.searchQuery.findFirst({
+      where: {
+        id: searchId,
+        userId: userId // Ensure ownership
+      },
+      include: {
+        _count: {
+          select: { results: true }
+        }
+      }
+    });
+
+    if (!searchQuery) {
+      throw new SearchNotFoundError(searchId);
+    }
+
+    return {
+      id: searchQuery.id,
+      query: searchQuery.query,
+      filters: searchQuery.filters,
+      metadata: searchQuery.metadata,
+      createdAt: searchQuery.createdAt,
+      userId: searchQuery.userId,
+      resultCount: searchQuery._count.results
+    };
   },
 
   /**
