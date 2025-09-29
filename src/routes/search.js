@@ -1,6 +1,7 @@
 const { Hono } = require('hono');
 const { searchService, SearchNotFoundError, SearchValidationError, SearchServiceError } = require('../services/searchService');
 const { jwtAuthMiddleware } = require('../middleware/auth');
+const { PaginationValidationError } = require('../utils/pagination');
 
 const search = new Hono();
 
@@ -249,6 +250,95 @@ search.get('/:queryId', async (c) => {
     return c.json({
       success: false,
       error: 'Failed to retrieve search query'
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/search/my
+ * Get personal search list with pagination and sorting
+ */
+search.get('/my', async (c) => {
+  try {
+    const user = c.get('user');
+    const queryParams = {
+      page: c.req.query('page'),
+      limit: c.req.query('limit'),
+      sort: c.req.query('sort'),
+      status: c.req.query('status'),
+      from: c.req.query('from'),
+      to: c.req.query('to')
+    };
+
+    const searchList = await searchService.getPersonalSearchList(user.id, queryParams);
+
+    return c.json({
+      success: true,
+      ...searchList
+    });
+
+  } catch (error) {
+    if (error instanceof SearchValidationError || error instanceof PaginationValidationError) {
+      return c.json({
+        success: false,
+        error: error.message
+      }, 400);
+    }
+
+    console.error('Personal search list endpoint error:', error);
+    return c.json({
+      success: false,
+      error: 'Failed to retrieve personal search list'
+    }, 500);
+  }
+});
+
+/**
+ * GET /api/search/team/:teamId
+ * Get team search list with pagination and sorting
+ * Requires team membership verification
+ */
+search.get('/team/:teamId', async (c) => {
+  try {
+    const user = c.get('user');
+    const teamId = c.req.param('teamId');
+
+    const queryParams = {
+      page: c.req.query('page'),
+      limit: c.req.query('limit'),
+      sort: c.req.query('sort'),
+      status: c.req.query('status'),
+      from: c.req.query('from'),
+      to: c.req.query('to')
+    };
+
+    const searchList = await searchService.getTeamSearchList(teamId, user.id, queryParams);
+
+    return c.json({
+      success: true,
+      ...searchList
+    });
+
+  } catch (error) {
+    if (error instanceof SearchValidationError || error instanceof PaginationValidationError) {
+      // Check if it's an access denied error (team membership)
+      if (error.message.includes('Access denied')) {
+        return c.json({
+          success: false,
+          error: error.message
+        }, 403);
+      }
+
+      return c.json({
+        success: false,
+        error: error.message
+      }, 400);
+    }
+
+    console.error('Team search list endpoint error:', error);
+    return c.json({
+      success: false,
+      error: 'Failed to retrieve team search list'
     }, 500);
   }
 });

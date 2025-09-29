@@ -507,4 +507,300 @@ describe('Search Service', () => {
       expect(score).toBeLessThanOrEqual(1);
     });
   });
+
+  describe('getPersonalSearchList', () => {
+    let personalTestUser;
+    let personalSearchQueries = [];
+
+    beforeEach(async () => {
+      // Create test user for personal search list tests
+      const uniqueId = Date.now() + Math.random();
+      personalTestUser = await userService.createUser({
+        name: 'Personal Search User',
+        email: `personal${uniqueId}@searchlisttest.com`
+      });
+
+      // Create multiple search queries for testing
+      const prisma = dbClient.getClient();
+      personalSearchQueries = [];
+
+      for (let i = 0; i < 5; i++) {
+        const searchQuery = await prisma.searchQuery.create({
+          data: {
+            userId: personalTestUser.id,
+            query: `Test query ${i + 1}`,
+            metadata: { graph_id: 'planned-supervisor-agent' }
+          }
+        });
+        personalSearchQueries.push(searchQuery);
+
+        // Create some results for each query
+        await prisma.searchResult.create({
+          data: {
+            queryId: searchQuery.id,
+            userId: personalTestUser.id,
+            threadId: `thread-${i + 1}`,
+            title: `Result for query ${i + 1}`,
+            content: `Content for search result ${i + 1}`,
+            score: 0.9 - (i * 0.1),
+            sourceService: 'ira'
+          }
+        });
+      }
+    });
+
+    test('should get personal search list with default pagination', async () => {
+      const result = await searchService.getPersonalSearchList(personalTestUser.id);
+
+      expect(result.data).toHaveLength(5);
+      expect(result.pagination.page).toBe(1);
+      expect(result.pagination.limit).toBe(20);
+      expect(result.pagination.total).toBe(5);
+      expect(result.pagination.totalPages).toBe(1);
+      expect(result.pagination.hasNext).toBe(false);
+      expect(result.pagination.hasPrev).toBe(false);
+
+      // Check data structure
+      expect(result.data[0]).toHaveProperty('id');
+      expect(result.data[0]).toHaveProperty('topic');
+      expect(result.data[0]).toHaveProperty('createdAt');
+      expect(result.data[0]).toHaveProperty('userId');
+      expect(result.data[0]).toHaveProperty('resultCount');
+    });
+
+    test('should respect pagination parameters', async () => {
+      const result = await searchService.getPersonalSearchList(personalTestUser.id, {
+        page: 1,
+        limit: 2
+      });
+
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination.page).toBe(1);
+      expect(result.pagination.limit).toBe(2);
+      expect(result.pagination.total).toBe(5);
+      expect(result.pagination.totalPages).toBe(3);
+      expect(result.pagination.hasNext).toBe(true);
+    });
+
+    test('should sort by createdAt desc by default', async () => {
+      const result = await searchService.getPersonalSearchList(personalTestUser.id);
+
+      expect(result.meta.sortBy).toBe('createdAt');
+      expect(result.meta.sortOrder).toBe('desc');
+
+      // Verify the order (newest first)
+      const dates = result.data.map(item => new Date(item.createdAt));
+      for (let i = 1; i < dates.length; i++) {
+        expect(dates[i-1].getTime()).toBeGreaterThanOrEqual(dates[i].getTime());
+      }
+    });
+
+    test('should support custom sorting', async () => {
+      const result = await searchService.getPersonalSearchList(personalTestUser.id, {
+        sort: 'query:asc'
+      });
+
+      expect(result.meta.sortBy).toBe('query');
+      expect(result.meta.sortOrder).toBe('asc');
+    });
+
+    test('should filter by date range', async () => {
+      const now = new Date();
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      const result = await searchService.getPersonalSearchList(personalTestUser.id, {
+        from: yesterday.toISOString(),
+        to: tomorrow.toISOString()
+      });
+
+      expect(result.data.length).toBe(5);
+      expect(result.meta.filters.from).toBeInstanceOf(Date);
+      expect(result.meta.filters.to).toBeInstanceOf(Date);
+    });
+
+    test('should throw validation error for missing user ID', async () => {
+      await expect(searchService.getPersonalSearchList(null))
+        .rejects.toThrow('User ID is required');
+    });
+
+    test('should return empty list for user with no searches', async () => {
+      const uniqueId = Date.now() + Math.random();
+      const newUser = await userService.createUser({
+        name: 'No Searches User',
+        email: `nosearches${uniqueId}@searchlisttest.com`
+      });
+
+      const result = await searchService.getPersonalSearchList(newUser.id);
+
+      expect(result.data).toHaveLength(0);
+      expect(result.pagination.total).toBe(0);
+    });
+  });
+
+  describe('getTeamSearchList', () => {
+    let teamTestUsers = [];
+    let testTeam;
+    let teamSearchQueries = [];
+
+    beforeEach(async () => {
+      const prisma = dbClient.getClient();
+      const uniqueId = Date.now() + Math.random();
+
+      // Create test team
+      teamTestUsers = [
+        await userService.createUser({ name: 'Team Member 1', email: `member1${uniqueId}@teamtest.com` }),
+        await userService.createUser({ name: 'Team Member 2', email: `member2${uniqueId}@teamtest.com` }),
+        await userService.createUser({ name: 'Non Member', email: `nonmember${uniqueId}@teamtest.com` })
+      ];
+
+      testTeam = await prisma.team.create({
+        data: {
+          name: 'Test Team',
+          description: 'Team for search list testing',
+          ownerId: teamTestUsers[0].id
+        }
+      });
+
+      // Add team members
+      await prisma.teamMember.createMany({
+        data: [
+          { teamId: testTeam.id, userId: teamTestUsers[0].id, role: 'owner' },
+          { teamId: testTeam.id, userId: teamTestUsers[1].id, role: 'member' }
+        ]
+      });
+
+      // Create search queries from team members
+      teamSearchQueries = [];
+      for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 3; j++) {
+          const searchQuery = await prisma.searchQuery.create({
+            data: {
+              userId: teamTestUsers[i].id,
+              query: `Team query from user ${i + 1} - ${j + 1}`,
+              metadata: { graph_id: 'planned-supervisor-agent' }
+            }
+          });
+          teamSearchQueries.push(searchQuery);
+
+          // Create a result for each query
+          await prisma.searchResult.create({
+            data: {
+              queryId: searchQuery.id,
+              userId: teamTestUsers[i].id,
+              threadId: `team-thread-${i}-${j}`,
+              title: `Team result from user ${i + 1}`,
+              content: `Team content ${i + 1}-${j + 1}`,
+              score: 0.8,
+              sourceService: 'ira'
+            }
+          });
+        }
+      }
+    });
+
+    test('should get team search list for team member', async () => {
+      const result = await searchService.getTeamSearchList(testTeam.id, teamTestUsers[0].id);
+
+      expect(result.data).toHaveLength(6); // 3 queries from each of 2 team members
+      expect(result.pagination.total).toBe(6);
+      expect(result.meta.teamId).toBe(testTeam.id);
+
+      // Check data structure includes user name
+      expect(result.data[0]).toHaveProperty('id');
+      expect(result.data[0]).toHaveProperty('topic');
+      expect(result.data[0]).toHaveProperty('userId');
+      expect(result.data[0]).toHaveProperty('userName');
+      expect(result.data[0]).toHaveProperty('resultCount');
+    });
+
+    test('should respect pagination for team searches', async () => {
+      const result = await searchService.getTeamSearchList(testTeam.id, teamTestUsers[0].id, {
+        page: 1,
+        limit: 3
+      });
+
+      expect(result.data).toHaveLength(3);
+      expect(result.pagination.page).toBe(1);
+      expect(result.pagination.limit).toBe(3);
+      expect(result.pagination.total).toBe(6);
+      expect(result.pagination.hasNext).toBe(true);
+    });
+
+    test('should sort by userName when specified', async () => {
+      const result = await searchService.getTeamSearchList(testTeam.id, teamTestUsers[0].id, {
+        sort: 'userName:asc'
+      });
+
+      expect(result.meta.sortBy).toBe('userName');
+      expect(result.meta.sortOrder).toBe('asc');
+
+      // Verify the order
+      const userNames = result.data.map(item => item.userName);
+      const sortedNames = [...userNames].sort();
+      expect(userNames).toEqual(sortedNames);
+    });
+
+    test('should deny access to non-team members', async () => {
+      await expect(
+        searchService.getTeamSearchList(testTeam.id, teamTestUsers[2].id)
+      ).rejects.toThrow('Access denied: User is not a member of this team');
+    });
+
+    test('should throw validation error for missing team ID', async () => {
+      await expect(
+        searchService.getTeamSearchList(null, teamTestUsers[0].id)
+      ).rejects.toThrow('Team ID is required');
+    });
+
+    test('should throw validation error for missing user ID', async () => {
+      await expect(
+        searchService.getTeamSearchList(testTeam.id, null)
+      ).rejects.toThrow('User ID is required');
+    });
+  });
+
+  describe('isUserTeamMember', () => {
+    let memberTestUser, nonMemberTestUser, testTeam;
+
+    beforeEach(async () => {
+      const prisma = dbClient.getClient();
+      const uniqueId = Date.now() + Math.random();
+
+      memberTestUser = await userService.createUser({
+        name: 'Member User',
+        email: `member${uniqueId}@teamtest.com`
+      });
+      nonMemberTestUser = await userService.createUser({
+        name: 'Non Member User',
+        email: `nonmember${uniqueId}@teamtest.com`
+      });
+
+      testTeam = await prisma.team.create({
+        data: {
+          name: 'Membership Test Team',
+          description: 'Team for membership testing',
+          ownerId: memberTestUser.id
+        }
+      });
+
+      await prisma.teamMember.create({
+        data: {
+          teamId: testTeam.id,
+          userId: memberTestUser.id,
+          role: 'owner'
+        }
+      });
+    });
+
+    test('should return true for team member', async () => {
+      const result = await searchService.isUserTeamMember(memberTestUser.id, testTeam.id);
+      expect(result).toBe(true);
+    });
+
+    test('should return false for non-team member', async () => {
+      const result = await searchService.isUserTeamMember(nonMemberTestUser.id, testTeam.id);
+      expect(result).toBe(false);
+    });
+  });
 });

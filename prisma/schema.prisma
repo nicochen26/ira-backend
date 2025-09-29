@@ -73,6 +73,9 @@ model SearchQuery {
   user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   results SearchResult[]
 
+  // Indexes for search list optimization
+  @@index([userId, createdAt])
+  @@index([createdAt])
   @@map("search_queries")
 }
 

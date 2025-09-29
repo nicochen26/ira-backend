@@ -1,6 +1,7 @@
 const dbClient = require('../db/client');
 const { getServiceByKey } = require('../config/agents');
 const { searchCache, generateSearchCacheKey, cacheSearchResults } = require('../utils/cache');
+const { createPaginationResponse, parseQueryParams } = require('../utils/pagination');
 
 class SearchNotFoundError extends Error {
   constructor(searchId) {
@@ -473,6 +474,241 @@ const searchService = {
     }
 
     return results;
+  },
+
+  /**
+   * Get personal search list for a user with optimized query
+   * @param {string} userId - User ID
+   * @param {Object} queryParams - Query parameters
+   * @param {number} queryParams.page - Page number (default: 1)
+   * @param {number} queryParams.limit - Items per page (default: 20)
+   * @param {string} queryParams.sort - Sort parameter (default: 'createdAt:desc')
+   * @param {string} queryParams.status - Optional status filter
+   * @returns {Promise<Object>} Paginated personal search list
+   */
+  async getPersonalSearchList(userId, queryParams = {}) {
+    const prisma = dbClient.getClient();
+
+    if (!userId) {
+      throw new SearchValidationError('User ID is required');
+    }
+
+    // Parse and validate query parameters
+    const { page, limit, offset, sort, filters } = parseQueryParams(queryParams, {
+      allowedSortFields: ['createdAt', 'query'],
+      defaultSort: 'createdAt:desc',
+      maxLimit: 100
+    });
+
+    // Build where clause
+    const whereClause = {
+      userId: userId
+    };
+
+    // Add status filter if specified
+    if (filters.status) {
+      // Since we're using SearchQuery model, we don't have status field
+      // This would need to be adapted based on actual search status tracking
+    }
+
+    // Add date range filters if specified
+    if (filters.from || filters.to) {
+      whereClause.createdAt = {};
+      if (filters.from) {
+        whereClause.createdAt.gte = filters.from;
+      }
+      if (filters.to) {
+        whereClause.createdAt.lte = filters.to;
+      }
+    }
+
+    // Get total count for pagination
+    const total = await prisma.searchQuery.count({
+      where: whereClause
+    });
+
+    // Get paginated search queries with optimized selection
+    const searchQueries = await prisma.searchQuery.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        query: true,
+        createdAt: true,
+        userId: true,
+        _count: {
+          select: { results: true }
+        }
+      },
+      orderBy: {
+        [sort.field]: sort.direction
+      },
+      skip: offset,
+      take: limit
+    });
+
+    // Transform data for API response
+    const transformedData = searchQueries.map(searchQuery => ({
+      id: searchQuery.id,
+      topic: searchQuery.query, // Using query as topic
+      createdAt: searchQuery.createdAt,
+      userId: searchQuery.userId,
+      resultCount: searchQuery._count.results
+    }));
+
+    return createPaginationResponse(
+      transformedData,
+      page,
+      limit,
+      total,
+      {
+        sortBy: sort.field,
+        sortOrder: sort.direction,
+        filters: filters
+      }
+    );
+  },
+
+  /**
+   * Get team search list with permission verification
+   * @param {string} teamId - Team ID
+   * @param {string} userId - Current user ID (for permission check)
+   * @param {Object} queryParams - Query parameters
+   * @returns {Promise<Object>} Paginated team search list
+   */
+  async getTeamSearchList(teamId, userId, queryParams = {}) {
+    const prisma = dbClient.getClient();
+
+    if (!teamId) {
+      throw new SearchValidationError('Team ID is required');
+    }
+
+    if (!userId) {
+      throw new SearchValidationError('User ID is required');
+    }
+
+    // First verify user is a member of the team
+    const teamMember = await prisma.teamMember.findFirst({
+      where: {
+        teamId: teamId,
+        userId: userId
+      }
+    });
+
+    if (!teamMember) {
+      throw new SearchValidationError('Access denied: User is not a member of this team');
+    }
+
+    // Parse and validate query parameters
+    const { page, limit, offset, sort, filters } = parseQueryParams(queryParams, {
+      allowedSortFields: ['createdAt', 'query', 'userName'],
+      defaultSort: 'createdAt:desc',
+      maxLimit: 100
+    });
+
+    // Build where clause for team searches
+    const whereClause = {
+      user: {
+        teamMembers: {
+          some: {
+            teamId: teamId
+          }
+        }
+      }
+    };
+
+    // Add date range filters if specified
+    if (filters.from || filters.to) {
+      whereClause.createdAt = {};
+      if (filters.from) {
+        whereClause.createdAt.gte = filters.from;
+      }
+      if (filters.to) {
+        whereClause.createdAt.lte = filters.to;
+      }
+    }
+
+    // Get total count for pagination
+    const total = await prisma.searchQuery.count({
+      where: whereClause
+    });
+
+    // Build orderBy clause - handle user name sorting specially
+    let orderBy;
+    if (sort.field === 'userName') {
+      orderBy = {
+        user: {
+          name: sort.direction
+        }
+      };
+    } else {
+      orderBy = {
+        [sort.field]: sort.direction
+      };
+    }
+
+    // Get paginated search queries with user information
+    const searchQueries = await prisma.searchQuery.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        query: true,
+        createdAt: true,
+        userId: true,
+        user: {
+          select: {
+            name: true
+          }
+        },
+        _count: {
+          select: { results: true }
+        }
+      },
+      orderBy: orderBy,
+      skip: offset,
+      take: limit
+    });
+
+    // Transform data for API response
+    const transformedData = searchQueries.map(searchQuery => ({
+      id: searchQuery.id,
+      topic: searchQuery.query,
+      createdAt: searchQuery.createdAt,
+      userId: searchQuery.userId,
+      userName: searchQuery.user.name,
+      resultCount: searchQuery._count.results
+    }));
+
+    return createPaginationResponse(
+      transformedData,
+      page,
+      limit,
+      total,
+      {
+        teamId: teamId,
+        sortBy: sort.field,
+        sortOrder: sort.direction,
+        filters: filters
+      }
+    );
+  },
+
+  /**
+   * Check if user is a team member (helper method)
+   * @param {string} userId - User ID
+   * @param {string} teamId - Team ID
+   * @returns {Promise<boolean>} True if user is team member
+   */
+  async isUserTeamMember(userId, teamId) {
+    const prisma = dbClient.getClient();
+
+    const teamMember = await prisma.teamMember.findFirst({
+      where: {
+        teamId: teamId,
+        userId: userId
+      }
+    });
+
+    return !!teamMember;
   }
 };
 
