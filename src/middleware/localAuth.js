@@ -9,7 +9,12 @@ const localJwtAuthMiddleware = () => {
   return async (c, next) => {
     try {
       const authHeader = c.req.header('Authorization');
-      const token = jwtUtil.extractTokenFromHeader(authHeader);
+      let token = jwtUtil.extractTokenFromHeader(authHeader);
+
+      // Fallback to query parameter for SSE (EventSource can't send custom headers)
+      if (!token) {
+        token = c.req.query('authorization') || c.req.query('token');
+      }
 
       if (!token) {
         return c.json({
