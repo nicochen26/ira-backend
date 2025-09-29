@@ -39,7 +39,8 @@ const validateAgentConfig = () => {
   const requiredEnvVars = [
     'IRA_BASE_URL',
     'HAP_BASE_URL',
-    'AUTH_BASE_URL'
+    'AUTH_BASE_URL',
+    'JWT_SECRET'
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);

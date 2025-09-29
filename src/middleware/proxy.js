@@ -4,8 +4,12 @@ const createProxyMiddleware = () => {
   return async (c, next) => {
     const path = c.req.path;
 
-    // Skip proxy for health endpoint
-    if (path === '/health') {
+    // Skip proxy for health endpoint, auth endpoints, and protected routes we handle locally
+    if (path === '/health' ||
+        path === '/api/auth/generate-token' ||
+        path === '/api/auth/verify-token' ||
+        path.startsWith('/api/protected/') ||
+        path.startsWith('/api/users/')) {
       return next();
     }
 
