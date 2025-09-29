@@ -31,9 +31,13 @@ app.use('*', createProxyMiddleware());
 // Routes
 const apiRoutes = require('./routes/api');
 const exampleRoutes = require('./routes/examples');
+const authRoutes = require('./routes/auth');
+const threadsRoutes = require('./routes/threads');
 
 app.route('/api', apiRoutes);
 app.route('/api', exampleRoutes);
+app.route('/api', authRoutes);
+app.route('/api', threadsRoutes);
 
 // Health check endpoint
 const { getAllServices } = require('./config/agents');
@@ -51,7 +55,7 @@ app.get('/health', async (c) => {
 
     // Check connectivity to all services
     const serviceChecks = await Promise.allSettled(
-      Object.entries(allServices).map(async ([key, service]) => {
+      Object.entries(allServices).map(async ([serviceKey, service]) => {
         const startTime = Date.now();
         try {
           // Try to connect to service's health endpoint (assume /health)
@@ -67,7 +71,7 @@ app.get('/health', async (c) => {
 
           return {
             name: service.name,
-            key: key,
+            key: serviceKey,
             url: service.url,
             pathPrefix: service.pathPrefix,
             status: response.ok ? 'healthy' : 'unhealthy',
@@ -78,7 +82,7 @@ app.get('/health', async (c) => {
           const duration = Date.now() - startTime;
           return {
             name: service.name,
-            key: key,
+            key: serviceKey,
             url: service.url,
             pathPrefix: service.pathPrefix,
             status: 'unreachable',

@@ -104,6 +104,11 @@ describe('Path-based Routing Configuration', () => {
           name: 'HAP Service',
           url: 'https://api.hemera.example.com/v1',
           pathPrefix: '/api/hap'
+        },
+        auth: {
+          name: 'Auth Service',
+          url: 'https://api.auth.example.com/v1',
+          pathPrefix: '/api/auth'
         }
       });
     });

@@ -25,6 +25,11 @@ const getAgentConfig = () => {
         name: 'HAP Service',
         url: process.env.HAP_BASE_URL,
         pathPrefix: '/api/hap'
+      },
+      'auth': {
+        name: 'Auth Service',
+        url: process.env.AUTH_BASE_URL,
+        pathPrefix: '/api/auth'
       }
     }
   };
@@ -33,7 +38,8 @@ const getAgentConfig = () => {
 const validateAgentConfig = () => {
   const requiredEnvVars = [
     'IRA_BASE_URL',
-    'HAP_BASE_URL'
+    'HAP_BASE_URL',
+    'AUTH_BASE_URL'
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -44,7 +50,7 @@ const validateAgentConfig = () => {
 
   // Validate URLs are properly formatted
   const agentConfig = getAgentConfig();
-  Object.entries(agentConfig.services).forEach(([key, service]) => {
+  Object.entries(agentConfig.services).forEach(([, service]) => {
     try {
       new URL(service.url);
     } catch (error) {

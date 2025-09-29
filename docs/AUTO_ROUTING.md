@@ -9,8 +9,9 @@ IRA Backend 现在支持基于路径的自动路由系统。开发者无需关�
 ### 自动路由映射
 
 ```
-/api/ira/*  -> IRA_BASE_URL/*
-/api/hap/*  -> HAP_BASE_URL/*
+/api/ira/*   -> IRA_BASE_URL/*
+/api/hap/*   -> HAP_BASE_URL/*
+/api/auth/*  -> AUTH_BASE_URL/*
 ```
 
 ### 环境配置
@@ -20,6 +21,7 @@ IRA Backend 现在支持基于路径的自动路由系统。开发者无需关�
 ```env
 IRA_BASE_URL=https://api.invest-research.example.com/v1
 HAP_BASE_URL=https://api.hemera.example.com/v1
+AUTH_BASE_URL=https://api.auth.example.com/v1
 ```
 
 ## 开发指南
@@ -41,6 +43,12 @@ app.get('/ira/users', async (c) => {
 // HAP 服务接口
 app.get('/hap/reports', async (c) => {
   // 请求会自动代理到: HAP_BASE_URL/reports
+  // 在这里添加业务逻辑、验证等
+});
+
+// 认证服务接口
+app.post('/auth/generate-token', async (c) => {
+  // 请求会自动代理到: AUTH_BASE_URL/generate-token
   // 在这里添加业务逻辑、验证等
 });
 ```
