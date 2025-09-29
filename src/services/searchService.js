@@ -699,11 +699,11 @@ const searchService = {
    * @param {string} searchParams.query - Search query string
    * @param {Object} searchParams.filters - Optional search filters
    * @param {Object} searchParams.metadata - IRA-specific metadata
-   * @param {string} userId - User ID performing the search
+   * @param {Object} user - User object with id, email, and name
    * @param {string} authToken - User's JWT token for IRA authentication
    * @returns {Promise<Object>} Search initialization result with searchId
    */
-  async performStreamingSearch(searchParams, userId, authToken) {
+  async performStreamingSearch(searchParams, user, authToken) {
     const prisma = dbClient.getClient();
 
     // Validate inputs
@@ -711,8 +711,8 @@ const searchService = {
       throw new SearchValidationError('Search query is required');
     }
 
-    if (!userId) {
-      throw new SearchValidationError('User ID is required');
+    if (!user || !user.id) {
+      throw new SearchValidationError('User information is required');
     }
 
     if (!authToken) {
@@ -720,10 +720,24 @@ const searchService = {
     }
 
     try {
+      // Ensure user exists in database (upsert)
+      await prisma.user.upsert({
+        where: { id: user.id },
+        update: {
+          email: user.email,
+          name: user.name || 'IRA User'
+        },
+        create: {
+          id: user.id,
+          email: user.email,
+          name: user.name || 'IRA User'
+        }
+      });
+
       // Store search query with INITIATED status
       const searchQuery = await prisma.searchQuery.create({
         data: {
-          userId: userId,
+          userId: user.id,
           query: searchParams.query.trim(),
           filters: searchParams.filters || null,
           metadata: {
@@ -739,7 +753,7 @@ const searchService = {
       const streamService = getSearchStreamService();
       const streamResult = await streamService.startStreamSearch(
         searchQuery.id,
-        userId,
+        user.id,
         authToken,
         searchParams.query.trim(),
         searchParams.metadata

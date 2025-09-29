@@ -36,7 +36,7 @@ search.post('/stream', async (c) => {
 
     const searchResults = await searchService.performStreamingSearch(
       searchParams,
-      user.id,
+      user,
       authToken
     );
 
