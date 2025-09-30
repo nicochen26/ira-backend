@@ -17,7 +17,17 @@ auth.post('/generate-token', async (c) => {
       }, 500);
     }
 
-    // Call IRA generate-token endpoint
+    // 从 client 请求 body 获取 userId/email/name
+    const body = await c.req.json();
+    const { userId, email, name } = body;
+
+    if (!userId || !email || !name) {
+      return c.json({
+        success: false,
+        message: 'Missing userId, email or name in request body'
+      }, 400);
+    }
+
     try {
       const iraTokenUrl = `${iraBaseUrl}/auth/generate-token`;
       console.log('Generating token from IRA service:', iraTokenUrl);
@@ -28,10 +38,7 @@ auth.post('/generate-token', async (c) => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          userId: 'debug-user-' + Date.now(),
-          email: 'debug-' + Date.now() + '@ira-backend.local'
-        })
+        body: JSON.stringify({ userId, email, name })
       });
 
       const iraData = await iraResponse.json();
@@ -59,11 +66,7 @@ auth.post('/generate-token', async (c) => {
         success: true,
         message: 'Token generated successfully',
         access_token: accessToken,
-        user: iraData.user || (iraData.data && iraData.data.user) || {
-          id: 'ira-user',
-          email: 'ira@debug.local',
-          name: 'IRA Debug User'
-        }
+        user: iraData.user || (iraData.data && iraData.data.user) || { id: userId, email, name }
       });
 
     } catch (fetchError) {

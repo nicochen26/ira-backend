@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRA API Debug Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .auth-section {
+            grid-column: 1 / -1;
+            margin-bottom: 20px;
+        }
+
+        .auth-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input, textarea, button, select {
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .search-input {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .stream-display {
+            height: 400px;
+            overflow-y: auto;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            padding: 15px;
+            background: #f8f9fa;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+        }
+
+        .stream-event {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .event-metadata {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+        }
+
+        .event-thinking {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .event-intermediate {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .event-report {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .event-error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        .event-timestamp {
+            color: #6c757d;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+
+        .search-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .search-item {
+            padding: 10px;
+            border-bottom: 1px solid #e1e8ed;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .search-item:hover {
+            background: #f8f9fa;
+        }
+
+        .search-item.active {
+            background: #e3f2fd;
+            border-left: 4px solid #3498db;
+        }
+
+        .search-query {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .search-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-processing {
+            background: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-completed {
+            background: #28a745;
+        }
+
+        .status-failed {
+            background: #dc3545;
+        }
+
+        .status-initiated {
+            background: #17a2b8;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .connection-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .clear-btn {
+            background: #6c757d;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+
+        .clear-btn:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 IRA API Debug Interface</h1>
+            <p class="subtitle">Real-time search streaming and API debugging tool</p>
+        </header>
+
+        <div class="section auth-section">
+            <h2>🔐 Token Generation</h2>
+            <div class="auth-form">
+                <button id="generateTokenBtn">Generate IRA Token</button>
+                <button id="useExistingTokenBtn" style="margin-left: 10px; background: #6c757d;">Use Existing Token</button>
+                <span id="authStatus" class="connection-status disconnected">No token available</span>
+            </div>
+            <div id="existingTokenInput" style="display: none; margin-top: 15px;">
+                <input type="text" id="manualToken" placeholder="Paste your existing token here..." style="width: 70%; margin-right: 10px;">
+                <button id="saveTokenBtn">Save Token</button>
+                <button id="cancelTokenBtn" style="background: #dc3545;">Cancel</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section">
+                <h2>🚀 Search & Stream</h2>
+                <div class="search-form">
+                    <textarea
+                        id="searchQuery"
+                        class="search-input"
+                        placeholder="Enter your investment research query..."
+                        >Analyze the recent performance of Tesla stock and provide investment recommendations.</textarea>
+                    <button id="startSearch" disabled>Start Streaming Search</button>
+                    <button id="stopSearch" disabled>Stop Stream</button>
+                </div>
+
+                <div class="connection-status" id="streamStatus">
+                    <span class="status-indicator"></span>
+                    <span>Ready to connect</span>
+                </div>
+
+                <div class="stream-display" id="streamDisplay">
+                    <div style="color: #6c757d; text-align: center; margin-top: 180px;">
+                        Waiting for search stream...
+                    </div>
+                </div>
+
+                <button class="clear-btn" id="clearStream">Clear Stream</button>
+            </div>
+
+            <div class="section">
+                <h2>📋 Search History</h2>
+                <button id="refreshHistory">Refresh History</button>
+                <div class="search-list" id="searchList">
+                    <div style="color: #6c757d; text-align: center; margin-top: 120px;">
+                        No searches yet
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class IRADebugInterface {
+            constructor() {
+                this.baseURL = 'http://localhost:8080';
+                this.authToken = null;
+                this.currentSearchId = null;
+                this.eventSource = null;
+
+                this.initializeElements();
+                this.bindEvents();
+                this.loadStoredAuth();
+            }
+
+            initializeElements() {
+                this.generateTokenBtn = document.getElementById('generateTokenBtn');
+                this.useExistingTokenBtn = document.getElementById('useExistingTokenBtn');
+                this.saveTokenBtn = document.getElementById('saveTokenBtn');
+                this.cancelTokenBtn = document.getElementById('cancelTokenBtn');
+                this.manualToken = document.getElementById('manualToken');
+                this.existingTokenInput = document.getElementById('existingTokenInput');
+                this.authStatus = document.getElementById('authStatus');
+
+                this.searchQuery = document.getElementById('searchQuery');
+                this.startSearchBtn = document.getElementById('startSearch');
+                this.stopSearchBtn = document.getElementById('stopSearch');
+                this.streamStatus = document.getElementById('streamStatus');
+                this.streamDisplay = document.getElementById('streamDisplay');
+                this.clearStreamBtn = document.getElementById('clearStream');
+
+                this.refreshHistoryBtn = document.getElementById('refreshHistory');
+                this.searchList = document.getElementById('searchList');
+            }
+
+            bindEvents() {
+                this.generateTokenBtn.addEventListener('click', () => this.generateToken());
+                this.useExistingTokenBtn.addEventListener('click', () => this.showExistingTokenInput());
+                this.saveTokenBtn.addEventListener('click', () => this.saveExistingToken());
+                this.cancelTokenBtn.addEventListener('click', () => this.hideExistingTokenInput());
+                this.startSearchBtn.addEventListener('click', () => this.startSearch());
+                this.stopSearchBtn.addEventListener('click', () => this.stopSearch());
+                this.clearStreamBtn.addEventListener('click', () => this.clearStream());
+                this.refreshHistoryBtn.addEventListener('click', () => this.loadSearchHistory());
+
+                // Ctrl+Enter for search
+                this.searchQuery.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) this.startSearch();
+                });
+            }
+
+            async generateToken() {
+                this.generateTokenBtn.disabled = true;
+                this.generateTokenBtn.textContent = 'Generating...';
+                this.showAuthStatus('Generating token from IRA service...', 'connecting');
+
+                try {
+                    // 传入固定参数
+                    const response = await fetch(`${this.baseURL}/api/auth/generate-token`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: 'fixed-user-id',
+                            email: 'fixed-email@ira.local',
+                            name: 'Fixed IRA User'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.access_token) {
+                        this.authToken = data.access_token;
+                        localStorage.setItem('authToken', this.authToken);
+                        localStorage.setItem('tokenUser', data.user?.name || 'IRA User');
+
+                        this.showAuthStatus(`Token generated successfully (${data.user?.name || 'IRA User'})`, 'connected');
+                        this.startSearchBtn.disabled = false;
+                        this.refreshHistoryBtn.disabled = false;
+                        this.loadSearchHistory();
+                    } else {
+                        throw new Error(data.message || 'Token generation failed');
+                    }
+                } catch (error) {
+                    this.showAuthStatus(`Token generation failed: ${error.message}`, 'disconnected');
+                } finally {
+                    this.generateTokenBtn.disabled = false;
+                    this.generateTokenBtn.textContent = 'Generate IRA Token';
+                }
+            }
+
+            showExistingTokenInput() {
+                this.existingTokenInput.style.display = 'block';
+                this.manualToken.focus();
+            }
+
+            hideExistingTokenInput() {
+                this.existingTokenInput.style.display = 'none';
+                this.manualToken.value = '';
+            }
+
+            saveExistingToken() {
+                const token = this.manualToken.value.trim();
+                if (!token) {
+                    alert('Please enter a token');
+                    return;
+                }
+
+                this.authToken = token;
+                localStorage.setItem('authToken', this.authToken);
+                localStorage.setItem('tokenUser', 'External User');
+
+                this.showAuthStatus('Existing token saved successfully', 'connected');
+                this.startSearchBtn.disabled = false;
+                this.refreshHistoryBtn.disabled = false;
+                this.hideExistingTokenInput();
+                this.loadSearchHistory();
+            }
+
+            loadStoredAuth() {
+                const token = localStorage.getItem('authToken');
+                const userName = localStorage.getItem('tokenUser');
+
+                if (token) {
+                    this.authToken = token;
+                    this.showAuthStatus(`Token restored (${userName || 'User'})`, 'connected');
+                    this.startSearchBtn.disabled = false;
+                    this.refreshHistoryBtn.disabled = false;
+                    this.loadSearchHistory();
+                }
+            }
+
+            showAuthStatus(message, status) {
+                this.authStatus.textContent = message;
+                this.authStatus.className = `connection-status ${status}`;
+            }
+
+            async startSearch() {
+                const query = this.searchQuery.value.trim();
+                if (!query) {
+                    alert('Please enter a search query');
+                    return;
+                }
+
+                if (!this.authToken) {
+                    alert('Please login first');
+                    return;
+                }
+
+                this.startSearchBtn.disabled = true;
+                this.stopSearchBtn.disabled = false;
+                this.updateStreamStatus('Starting search...', 'connecting');
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/search/stream`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        body: JSON.stringify({ query })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.searchId) {
+                        this.currentSearchId = data.searchId;
+                        this.connectToStream(data.searchId);
+                        this.loadSearchHistory();
+                    } else {
+                        throw new Error(data.message || 'Failed to start search');
+                    }
+                } catch (error) {
+                    this.updateStreamStatus(`Error: ${error.message}`, 'disconnected');
+                    this.startSearchBtn.disabled = false;
+                    this.stopSearchBtn.disabled = true;
+                }
+            }
+
+            connectToStream(searchId) {
+                this.closeStream();
+
+                const streamUrl = `${this.baseURL}/api/search/stream/${searchId}?authorization=${encodeURIComponent(this.authToken)}`;
+                this.eventSource = new EventSource(streamUrl);
+
+                this.updateStreamStatus('Connected to stream', 'connected');
+
+                this.eventSource.onopen = () => {
+                    this.updateStreamStatus('Stream connected', 'connected');
+                };
+
+                this.eventSource.onmessage = (event) => {
+                    this.handleStreamEvent('message', event.data);
+                };
+
+                this.eventSource.addEventListener('connected', (event) => {
+                    this.handleStreamEvent('connected', event.data);
+                });
+
+                this.eventSource.addEventListener('METADATA', (event) => {
+                    this.handleStreamEvent('METADATA', event.data);
+                });
+
+                this.eventSource.addEventListener('THINKING', (event) => {
+                    this.handleStreamEvent('THINKING', event.data);
+                });
+
+                this.eventSource.addEventListener('INTERMEDIATE', (event) => {
+                    this.handleStreamEvent('INTERMEDIATE', event.data);
+                });
+
+                this.eventSource.addEventListener('REPORT', (event) => {
+                    this.handleStreamEvent('REPORT', event.data);
+                });
+
+                this.eventSource.addEventListener('error', (event) => {
+                    this.handleStreamEvent('error', event.data);
+                });
+
+                this.eventSource.addEventListener('heartbeat', (event) => {
+                    // Silent heartbeat handling
+                });
+
+                this.eventSource.onerror = (error) => {
+                    console.error('EventSource error:', error);
+                    this.updateStreamStatus('Stream connection error', 'disconnected');
+                    this.stopSearch();
+                };
+            }
+
+            handleStreamEvent(type, data) {
+                const timestamp = new Date().toLocaleTimeString();
+                let eventClass = 'stream-event';
+                let content = '';
+
+                try {
+                    const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+                    switch (type) {
+                        case 'connected':
+                            eventClass += ' event-metadata';
+                            content = `Connected to search stream`;
+                            break;
+                        case 'METADATA':
+                            eventClass += ' event-metadata';
+                            content = `Search metadata: ${JSON.stringify(parsedData, null, 2)}`;
+                            break;
+                        case 'THINKING':
+                            eventClass += ' event-thinking';
+                            content = `Thinking: ${parsedData.content || parsedData}`;
+                            break;
+                        case 'INTERMEDIATE':
+                            eventClass += ' event-intermediate';
+                            content = `Intermediate: ${parsedData.content || parsedData}`;
+                            break;
+                        case 'REPORT':
+                            eventClass += ' event-report';
+                            content = `Final Report:\n${parsedData.content || parsedData}`;
+                            this.stopSearch();
+                            this.loadSearchHistory();
+                            break;
+                        case 'error':
+                            eventClass += ' event-error';
+                            content = `Error: ${parsedData.message || parsedData}`;
+                            this.stopSearch();
+                            break;
+                        default:
+                            content = `${type}: ${typeof parsedData === 'object' ? JSON.stringify(parsedData, null, 2) : parsedData}`;
+                    }
+                } catch (e) {
+                    content = `${type}: ${data}`;
+                }
+
+                const eventElement = document.createElement('div');
+                eventElement.className = eventClass;
+                eventElement.innerHTML = `
+                    <div class="event-timestamp">${timestamp}</div>
+                    <div class="event-content">${content}</div>
+                `;
+
+                this.streamDisplay.appendChild(eventElement);
+                this.streamDisplay.scrollTop = this.streamDisplay.scrollHeight;
+            }
+
+            stopSearch() {
+                this.closeStream();
+                this.updateStreamStatus('Stream stopped', 'disconnected');
+                this.startSearchBtn.disabled = false;
+                this.stopSearchBtn.disabled = true;
+                this.currentSearchId = null;
+            }
+
+            closeStream() {
+                if (this.eventSource) {
+                    this.eventSource.close();
+                    this.eventSource = null;
+                }
+            }
+
+            clearStream() {
+                this.streamDisplay.innerHTML = `
+                    <div style="color: #6c757d; text-align: center; margin-top: 180px;">
+                        Stream cleared - ready for new search
+                    </div>
+                `;
+            }
+
+            updateStreamStatus(message, status) {
+                const indicator = this.streamStatus.querySelector('.status-indicator');
+                const text = this.streamStatus.querySelector('span:last-child');
+
+                indicator.className = `status-indicator status-${status}`;
+                text.textContent = message;
+            }
+
+            async loadSearchHistory() {
+                if (!this.authToken) return;
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/search/history`, {
+                        headers: { 'Authorization': `Bearer ${this.authToken}` }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success && data.data) {
+                        this.renderSearchHistory(data.data.queries);
+                    }
+                } catch (error) {
+                    console.error('Failed to load search history:', error);
+                }
+            }
+
+            renderSearchHistory(searches) {
+                if (searches.length === 0) {
+                    this.searchList.innerHTML = `
+                        <div style="color: #6c757d; text-align: center; margin-top: 120px;">
+                            No searches yet
+                        </div>
+                    `;
+                    return;
+                }
+
+                this.searchList.innerHTML = searches.map(search => {
+                    // Determine status based on available data
+                    const status = search.status || (search.totalResults > 0 ? 'completed' : 'processing');
+                    const resultsText = search.totalResults !== undefined ? ` (${search.totalResults} results)` : '';
+
+                    return `
+                        <div class="search-item ${search.id === this.currentSearchId ? 'active' : ''}"
+                             onclick="debugInterface.selectSearch('${search.id}')">
+                            <div class="search-query">${search.query}</div>
+                            <div class="search-meta">
+                                <span class="status-indicator status-${status.toLowerCase()}"></span>
+                                ${status.charAt(0).toUpperCase() + status.slice(1)}${resultsText} • ${new Date(search.createdAt).toLocaleString()}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            selectSearch(searchId) {
+                // You could implement viewing a specific search's results here
+                console.log('Selected search:', searchId);
+            }
+        }
+
+        // Initialize the interface
+        const debugInterface = new IRADebugInterface();
+    </script>
+</body>
+</html>
