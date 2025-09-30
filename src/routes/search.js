@@ -47,6 +47,7 @@ search.post('/stream', async (c) => {
 
   } catch (error) {
     if (error instanceof SearchValidationError) {
+      console.error('Streaming search validation error:', error);
       return c.json({
         success: false,
         error: error.message
@@ -54,6 +55,7 @@ search.post('/stream', async (c) => {
     }
 
     if (error instanceof SearchServiceError) {
+      console.error('Streaming search service error:', error);
       return c.json({
         success: false,
         error: error.message

@@ -760,7 +760,7 @@ const searchService = {
       );
 
       return {
-        queryId: searchQuery.id,
+        searchId: searchQuery.id,
         query: searchParams.query.trim(),
         status: 'INITIATED',
         streaming: true,

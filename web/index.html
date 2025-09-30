@@ -488,8 +488,9 @@
                         body: JSON.stringify({ query })
                     });
 
-                    const data = await response.json();
+                    const data = (await response.json()).data;
 
+                    console.log(`Starting search response: ${response.ok} ${data.searchId} ${data.message}`);
                     if (response.ok && data.searchId) {
                         this.currentSearchId = data.searchId;
                         this.connectToStream(data.searchId);
