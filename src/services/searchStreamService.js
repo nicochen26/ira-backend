@@ -200,6 +200,7 @@ class SearchStreamService {
           data: {
             queryId: searchId,
             userId: streamInfo.userId,
+            threadId: streamInfo.threadId,
             title: this.generateResultTitle(resultData.type, resultData.content),
             content: this.formatResultContent(resultData.content),
             resultType: resultData.type,
