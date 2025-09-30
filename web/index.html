@@ -732,6 +732,9 @@
                     return;
                 }
 
+                // Clear previous stream display
+                this.streamDisplay.innerHTML = '';
+
                 this.startSearchBtn.disabled = true;
                 this.stopSearchBtn.disabled = false;
                 this.updateStreamStatus('Starting search...', 'connecting');
