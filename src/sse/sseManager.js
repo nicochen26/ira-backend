@@ -187,8 +187,11 @@ class SSEManager extends EventEmitter {
   broadcastToSearch(searchId, eventType, data, eventId = null) {
     const connections = this.connections.get(searchId);
     if (!connections || connections.size === 0) {
+      console.log(`[SSE] No connections found for search ${searchId}, event: ${eventType}`);
       return 0;
     }
+
+    console.log(`[SSE] Broadcasting to ${connections.size} connection(s) for search ${searchId}, event: ${eventType}`);
 
     let successCount = 0;
     const failedConnections = [];
@@ -203,6 +206,8 @@ class SSEManager extends EventEmitter {
 
     // Clean up failed connections
     failedConnections.forEach(conn => this.removeConnection(conn));
+
+    console.log(`[SSE] Broadcast completed: ${successCount}/${connections.size} successful`);
 
     return successCount;
   }

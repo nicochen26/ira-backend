@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IRA API Debug Interface</title>
+    <title>Search API Debug Interface</title>
     <style>
         * {
             margin: 0;
@@ -277,6 +277,169 @@
             background: #5a6268;
         }
 
+        .user-switcher {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .user-button {
+            padding: 12px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .user-button:hover {
+            border-color: #3498db;
+            background: #f8f9fa;
+        }
+
+        .user-button.active {
+            border-color: #3498db;
+            background: #e3f2fd;
+            font-weight: 600;
+        }
+
+        .user-icon {
+            font-size: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .user-email {
+            font-size: 11px;
+            color: #7f8c8d;
+        }
+
+        .team-create-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .team-create-form input {
+            flex: 1;
+        }
+
+        .team-card {
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .team-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .team-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+
+        .team-role {
+            font-size: 12px;
+            padding: 4px 8px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .member-section {
+            margin-top: 15px;
+        }
+
+        .member-section h4 {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+
+        .member-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .member-badge {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .member-remove {
+            cursor: pointer;
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .member-remove:hover {
+            color: #c0392b;
+        }
+
+        .team-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .team-actions select {
+            flex: 1;
+        }
+
+        .history-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+
+        .history-tabs button {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: #7f8c8d;
+        }
+
+        .history-tabs button:hover {
+            color: #34495e;
+        }
+
+        .history-tabs button.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .team-selector-container {
+            margin-bottom: 15px;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -292,14 +455,14 @@
 <body>
     <div class="container">
         <header>
-            <h1>🔍 IRA API Debug Interface</h1>
+            <h1>🔍 Search API Debug Interface</h1>
             <p class="subtitle">Real-time search streaming and API debugging tool</p>
         </header>
 
         <div class="section auth-section">
             <h2>🔐 Token Generation</h2>
             <div class="auth-form">
-                <button id="generateTokenBtn">Generate IRA Token</button>
+                <button id="generateTokenBtn">Generate Token</button>
                 <button id="useExistingTokenBtn" style="margin-left: 10px; background: #6c757d;">Use Existing Token</button>
                 <span id="authStatus" class="connection-status disconnected">No token available</span>
             </div>
@@ -307,6 +470,26 @@
                 <input type="text" id="manualToken" placeholder="Paste your existing token here..." style="width: 70%; margin-right: 10px;">
                 <button id="saveTokenBtn">Save Token</button>
                 <button id="cancelTokenBtn" style="background: #dc3545;">Cancel</button>
+            </div>
+        </div>
+
+        <div class="section auth-section">
+            <h2>👥 Demo Users</h2>
+            <div class="user-switcher" id="userSwitcher">
+                <!-- User buttons will be dynamically generated -->
+            </div>
+        </div>
+
+        <div class="section auth-section">
+            <h2>🏢 Team Management</h2>
+            <div class="team-create-form">
+                <input type="text" id="teamNameInput" placeholder="Enter team name...">
+                <button id="createTeamBtn" disabled>Create Team</button>
+            </div>
+            <div id="teamsList">
+                <div style="color: #6c757d; text-align: center; padding: 20px;">
+                    No teams yet. Create your first team!
+                </div>
             </div>
         </div>
 
@@ -339,10 +522,30 @@
 
             <div class="section">
                 <h2>📋 Search History</h2>
-                <button id="refreshHistory">Refresh History</button>
-                <div class="search-list" id="searchList">
-                    <div style="color: #6c757d; text-align: center; margin-top: 120px;">
-                        No searches yet
+                <div class="history-tabs">
+                    <button id="personalTab" class="active">Personal History</button>
+                    <button id="teamTab">Team History</button>
+                </div>
+                <div id="personalHistory">
+                    <button id="refreshHistory">Refresh History</button>
+                    <div class="search-list" id="searchList">
+                        <div style="color: #6c757d; text-align: center; margin-top: 120px;">
+                            No searches yet
+                        </div>
+                    </div>
+                </div>
+                <div id="teamHistory" style="display: none;">
+                    <div class="team-selector-container">
+                        <label for="teamHistorySelector" style="display: block; margin-bottom: 8px; font-size: 14px; color: #7f8c8d;">Select Team:</label>
+                        <select id="teamHistorySelector" style="width: 100%;">
+                            <option value="">-- Select a team --</option>
+                        </select>
+                    </div>
+                    <button id="refreshTeamHistory">Refresh Team History</button>
+                    <div class="search-list" id="teamHistoryList">
+                        <div style="color: #6c757d; text-align: center; margin-top: 120px;">
+                            Select a team to view history
+                        </div>
                     </div>
                 </div>
             </div>
@@ -350,15 +553,43 @@
     </div>
 
     <script>
-        class IRADebugInterface {
+        class SearchDebugInterface {
             constructor() {
                 this.baseURL = 'http://localhost:8080';
                 this.authToken = null;
                 this.currentSearchId = null;
                 this.eventSource = null;
+                this.currentUser = null;
+                this.currentTeams = [];
+
+                // Demo users configuration
+                this.demoUsers = [
+                    {
+                        id: 'demo-alice',
+                        name: 'Alice',
+                        email: 'alice@demo.local',
+                        color: '#3498db',
+                        icon: '👩‍💼'
+                    },
+                    {
+                        id: 'demo-bob',
+                        name: 'Bob',
+                        email: 'bob@demo.local',
+                        color: '#2ecc71',
+                        icon: '👨‍💻'
+                    },
+                    {
+                        id: 'demo-carol',
+                        name: 'Carol',
+                        email: 'carol@demo.local',
+                        color: '#e74c3c',
+                        icon: '👩‍🔬'
+                    }
+                ];
 
                 this.initializeElements();
                 this.bindEvents();
+                this.renderUserSwitcher();
                 this.loadStoredAuth();
             }
 
@@ -380,6 +611,21 @@
 
                 this.refreshHistoryBtn = document.getElementById('refreshHistory');
                 this.searchList = document.getElementById('searchList');
+
+                // New elements for team management
+                this.userSwitcher = document.getElementById('userSwitcher');
+                this.teamNameInput = document.getElementById('teamNameInput');
+                this.createTeamBtn = document.getElementById('createTeamBtn');
+                this.teamsList = document.getElementById('teamsList');
+
+                // History tabs
+                this.personalTab = document.getElementById('personalTab');
+                this.teamTab = document.getElementById('teamTab');
+                this.personalHistory = document.getElementById('personalHistory');
+                this.teamHistory = document.getElementById('teamHistory');
+                this.teamHistorySelector = document.getElementById('teamHistorySelector');
+                this.refreshTeamHistoryBtn = document.getElementById('refreshTeamHistory');
+                this.teamHistoryList = document.getElementById('teamHistoryList');
             }
 
             bindEvents() {
@@ -392,6 +638,18 @@
                 this.clearStreamBtn.addEventListener('click', () => this.clearStream());
                 this.refreshHistoryBtn.addEventListener('click', () => this.loadSearchHistory());
 
+                // Team management
+                this.createTeamBtn.addEventListener('click', () => this.createTeam());
+                this.teamNameInput.addEventListener('input', () => {
+                    this.createTeamBtn.disabled = !this.teamNameInput.value.trim() || !this.authToken;
+                });
+
+                // History tabs
+                this.personalTab.addEventListener('click', () => this.switchHistoryTab('personal'));
+                this.teamTab.addEventListener('click', () => this.switchHistoryTab('team'));
+                this.teamHistorySelector.addEventListener('change', () => this.loadTeamHistory());
+                this.refreshTeamHistoryBtn.addEventListener('click', () => this.loadTeamHistory());
+
                 // Ctrl+Enter for search
                 this.searchQuery.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter' && e.ctrlKey) this.startSearch();
@@ -399,42 +657,14 @@
             }
 
             async generateToken() {
-                this.generateTokenBtn.disabled = true;
-                this.generateTokenBtn.textContent = 'Generating...';
-                this.showAuthStatus('Generating token from IRA service...', 'connecting');
-
-                try {
-                    // 传入固定参数
-                    const response = await fetch(`${this.baseURL}/api/auth/generate-token`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userId: 'fixed-user-id',
-                            email: 'fixed-email@ira.local',
-                            name: 'Fixed IRA User'
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok && data.access_token) {
-                        this.authToken = data.access_token;
-                        localStorage.setItem('authToken', this.authToken);
-                        localStorage.setItem('tokenUser', data.user?.name || 'IRA User');
-
-                        this.showAuthStatus(`Token generated successfully (${data.user?.name || 'IRA User'})`, 'connected');
-                        this.startSearchBtn.disabled = false;
-                        this.refreshHistoryBtn.disabled = false;
-                        this.loadSearchHistory();
-                    } else {
-                        throw new Error(data.message || 'Token generation failed');
-                    }
-                } catch (error) {
-                    this.showAuthStatus(`Token generation failed: ${error.message}`, 'disconnected');
-                } finally {
-                    this.generateTokenBtn.disabled = false;
-                    this.generateTokenBtn.textContent = 'Generate IRA Token';
+                // If a demo user is selected, generate token for that user
+                if (this.currentUser) {
+                    await this.generateTokenForUser(this.currentUser);
+                    return;
                 }
+
+                // Otherwise, prompt user to select a demo user first
+                this.showAuthStatus('Please select a user from the Demo Users section', 'disconnected');
             }
 
             showExistingTokenInput() {
@@ -466,16 +696,23 @@
             }
 
             loadStoredAuth() {
-                const token = localStorage.getItem('authToken');
-                const userName = localStorage.getItem('tokenUser');
+                // Check for previously selected demo user, but don't auto-load token
+                const currentDemoUserId = localStorage.getItem('currentDemoUser');
+                if (currentDemoUserId) {
+                    const demoUser = this.demoUsers.find(u => u.id === currentDemoUserId);
 
-                if (token) {
-                    this.authToken = token;
-                    this.showAuthStatus(`Token restored (${userName || 'User'})`, 'connected');
-                    this.startSearchBtn.disabled = false;
-                    this.refreshHistoryBtn.disabled = false;
-                    this.loadSearchHistory();
+                    if (demoUser) {
+                        // Set current user for UI display, but don't load token yet
+                        this.currentUser = demoUser;
+                        this.showAuthStatus(`${demoUser.name} selected. Click to generate token.`, 'disconnected');
+                        // Re-render user switcher to show active state
+                        this.renderUserSwitcher();
+                        return;
+                    }
                 }
+
+                // Show prompt to select a user
+                this.showAuthStatus('Select a demo user to get started', 'disconnected');
             }
 
             showAuthStatus(message, status) {
@@ -561,6 +798,18 @@
                     this.handleStreamEvent('REPORT', event.data);
                 });
 
+                this.eventSource.addEventListener('result', (event) => {
+                    this.handleStreamEvent('result', event.data);
+                });
+
+                this.eventSource.addEventListener('complete', (event) => {
+                    this.handleStreamEvent('complete', event.data);
+                });
+
+                this.eventSource.addEventListener('status', (event) => {
+                    this.handleStreamEvent('status', event.data);
+                });
+
                 this.eventSource.addEventListener('error', (event) => {
                     this.handleStreamEvent('error', event.data);
                 });
@@ -587,7 +836,42 @@
                     switch (type) {
                         case 'connected':
                             eventClass += ' event-metadata';
-                            content = `Connected to search stream`;
+                            content = `Connected to search stream (ID: ${parsedData.searchId})`;
+                            break;
+                        case 'status':
+                            eventClass += ' event-metadata';
+                            content = `Status: ${parsedData.status} - ${parsedData.message || ''}`;
+                            break;
+                        case 'result':
+                            // Handle result events with different types
+                            const resultType = parsedData.type || 'UNKNOWN';
+                            switch (resultType) {
+                                case 'METADATA':
+                                    eventClass += ' event-metadata';
+                                    content = `Metadata: ${parsedData.content || JSON.stringify(parsedData)}`;
+                                    break;
+                                case 'THINKING':
+                                    eventClass += ' event-thinking';
+                                    content = `AI Thinking: ${parsedData.content || ''}`;
+                                    break;
+                                case 'INTERMEDIATE':
+                                    eventClass += ' event-intermediate';
+                                    content = `Intermediate Result: ${parsedData.content || ''}`;
+                                    break;
+                                case 'REPORT':
+                                    eventClass += ' event-report';
+                                    content = `Final Report:\n${parsedData.content || ''}`;
+                                    break;
+                                default:
+                                    eventClass += ' event-intermediate';
+                                    content = `Result [${resultType}]: ${parsedData.content || JSON.stringify(parsedData)}`;
+                            }
+                            break;
+                        case 'complete':
+                            eventClass += ' event-report';
+                            content = `Search completed! Total results: ${parsedData.totalResults}, Duration: ${(parsedData.duration / 1000).toFixed(2)}s`;
+                            this.stopSearch();
+                            this.loadSearchHistory();
                             break;
                         case 'METADATA':
                             eventClass += ' event-metadata';
@@ -711,10 +995,374 @@
                 // You could implement viewing a specific search's results here
                 console.log('Selected search:', searchId);
             }
+
+            // ===== Demo Users Methods =====
+            renderUserSwitcher() {
+                const currentUserId = this.currentUser?.id || localStorage.getItem('currentDemoUser');
+
+                this.userSwitcher.innerHTML = this.demoUsers.map(user => {
+                    const isActive = user.id === currentUserId;
+                    return `
+                        <button class="user-button ${isActive ? 'active' : ''}" data-user-id="${user.id}" style="border-color: ${user.color}20;">
+                            <span class="user-icon">${user.icon}</span>
+                            <div class="user-info">
+                                <div>${user.name}</div>
+                                <div class="user-email">${user.email}</div>
+                            </div>
+                        </button>
+                    `;
+                }).join('');
+
+                // Add click handlers
+                this.userSwitcher.querySelectorAll('.user-button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const userId = btn.getAttribute('data-user-id');
+                        this.switchUser(userId);
+                    });
+                });
+            }
+
+            async switchUser(userId) {
+                const user = this.demoUsers.find(u => u.id === userId);
+                if (!user) return;
+
+                // Update UI to show loading
+                const userButtons = this.userSwitcher.querySelectorAll('.user-button');
+                userButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = this.userSwitcher.querySelector(`[data-user-id="${userId}"]`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Always generate new token (don't use cached token)
+                this.currentUser = user;
+                localStorage.setItem('currentDemoUser', userId);
+                await this.generateTokenForUser(user);
+            }
+
+            async generateTokenForUser(user) {
+                try {
+                    this.showAuthStatus(`Generating token for ${user.name}...`, 'connecting');
+
+                    const response = await fetch(`${this.baseURL}/api/auth/generate-token`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: user.id,
+                            email: user.email,
+                            name: user.name
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.access_token) {
+                        this.authToken = data.access_token;
+                        this.currentUser = user;
+                        localStorage.setItem(`demoUser_${user.id}_token`, this.authToken);
+                        localStorage.setItem('currentDemoUser', user.id);
+                        this.showAuthStatus(`${user.name} logged in`, 'connected');
+                        this.enableButtons();
+                        await this.refreshAllData();
+                    } else {
+                        throw new Error(data.message || 'Token generation failed');
+                    }
+                } catch (error) {
+                    this.showAuthStatus(`Failed to switch to ${user.name}: ${error.message}`, 'disconnected');
+                }
+            }
+
+            enableButtons() {
+                this.startSearchBtn.disabled = false;
+                this.refreshHistoryBtn.disabled = false;
+                this.createTeamBtn.disabled = !this.teamNameInput.value.trim();
+            }
+
+            showAuthStatus(message, status) {
+                this.authStatus.textContent = message;
+                this.authStatus.className = `connection-status ${status}`;
+            }
+
+            async refreshAllData() {
+                await Promise.all([
+                    this.loadSearchHistory(),
+                    this.loadTeams()
+                ]);
+            }
+
+            // ===== Team Management Methods =====
+            async loadTeams() {
+                if (!this.authToken) return;
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/teams`, {
+                        headers: { 'Authorization': `Bearer ${this.authToken}` }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success && data.data) {
+                        this.currentTeams = data.data;
+                        this.renderTeams(data.data);
+                        this.updateTeamSelector(data.data);
+                    }
+                } catch (error) {
+                    console.error('Failed to load teams:', error);
+                }
+            }
+
+            renderTeams(teams) {
+                if (teams.length === 0) {
+                    this.teamsList.innerHTML = `
+                        <div style="color: #6c757d; text-align: center; padding: 20px;">
+                            No teams yet. Create your first team!
+                        </div>
+                    `;
+                    return;
+                }
+
+                this.teamsList.innerHTML = teams.map(team => `
+                    <div class="team-card" data-team-id="${team.id}">
+                        <div class="team-header">
+                            <div class="team-name">${team.name}</div>
+                            <div class="team-role">${team.role || 'member'}</div>
+                        </div>
+                        ${team.description ? `<div style="color: #7f8c8d; font-size: 13px; margin-bottom: 10px;">${team.description}</div>` : ''}
+                        <div class="member-section">
+                            <h4>Members:</h4>
+                            <div class="member-list" id="members-${team.id}">
+                                <span style="color: #7f8c8d;">Loading...</span>
+                            </div>
+                        </div>
+                        <div class="team-actions">
+                            <select id="member-select-${team.id}">
+                                <option value="">-- Select user to add --</option>
+                                ${this.demoUsers.map(u => `<option value="${u.id}">${u.icon} ${u.name}</option>`).join('')}
+                            </select>
+                            <button onclick="debugInterface.addMemberToTeam('${team.id}')">Add Member</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Load members for each team
+                teams.forEach(team => this.loadTeamMembers(team.id));
+            }
+
+            async loadTeamMembers(teamId) {
+                if (!this.authToken) return;
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/teams/${teamId}/members`, {
+                        headers: { 'Authorization': `Bearer ${this.authToken}` }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success && data.data) {
+                        this.renderTeamMembers(teamId, data.data);
+                    }
+                } catch (error) {
+                    console.error('Failed to load team members:', error);
+                    const memberList = document.getElementById(`members-${teamId}`);
+                    if (memberList) {
+                        memberList.innerHTML = '<span style="color: #e74c3c;">Failed to load</span>';
+                    }
+                }
+            }
+
+            renderTeamMembers(teamId, members) {
+                const memberList = document.getElementById(`members-${teamId}`);
+                if (!memberList) return;
+
+                if (members.length === 0) {
+                    memberList.innerHTML = '<span style="color: #7f8c8d;">No members yet</span>';
+                    return;
+                }
+
+                memberList.innerHTML = members.map(member => {
+                    const user = this.demoUsers.find(u => u.id === member.userId);
+                    const icon = user ? user.icon : '👤';
+                    return `
+                        <div class="member-badge">
+                            <span>${icon} ${member.name}</span>
+                            <span class="member-remove" onclick="debugInterface.removeMemberFromTeam('${teamId}', '${member.userId}')">×</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            async createTeam() {
+                const teamName = this.teamNameInput.value.trim();
+                if (!teamName || !this.authToken) return;
+
+                try {
+                    this.createTeamBtn.disabled = true;
+                    this.createTeamBtn.textContent = 'Creating...';
+
+                    const response = await fetch(`${this.baseURL}/api/teams`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        body: JSON.stringify({ name: teamName })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        this.teamNameInput.value = '';
+                        await this.loadTeams();
+                        alert(`Team "${teamName}" created successfully!`);
+                    } else {
+                        throw new Error(data.error || 'Failed to create team');
+                    }
+                } catch (error) {
+                    alert(`Failed to create team: ${error.message}`);
+                } finally {
+                    this.createTeamBtn.disabled = false;
+                    this.createTeamBtn.textContent = 'Create Team';
+                }
+            }
+
+            async addMemberToTeam(teamId) {
+                const selectElement = document.getElementById(`member-select-${teamId}`);
+                const userIdToAdd = selectElement.value;
+
+                if (!userIdToAdd || !this.authToken) {
+                    alert('Please select a user to add');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/teams/${teamId}/members`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        body: JSON.stringify({ userIdToAdd })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        selectElement.value = '';
+                        await this.loadTeamMembers(teamId);
+                        alert('Member added successfully!');
+                    } else {
+                        throw new Error(data.error || 'Failed to add member');
+                    }
+                } catch (error) {
+                    alert(`Failed to add member: ${error.message}`);
+                }
+            }
+
+            async removeMemberFromTeam(teamId, userId) {
+                if (!confirm('Remove this member from the team?')) return;
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/teams/${teamId}/members/${userId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${this.authToken}` }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        await this.loadTeamMembers(teamId);
+                        alert('Member removed successfully!');
+                    } else {
+                        throw new Error(data.error || 'Failed to remove member');
+                    }
+                } catch (error) {
+                    alert(`Failed to remove member: ${error.message}`);
+                }
+            }
+
+            // ===== History Tab Management =====
+            switchHistoryTab(tab) {
+                if (tab === 'personal') {
+                    this.personalTab.classList.add('active');
+                    this.teamTab.classList.remove('active');
+                    this.personalHistory.style.display = 'block';
+                    this.teamHistory.style.display = 'none';
+                } else {
+                    this.teamTab.classList.add('active');
+                    this.personalTab.classList.remove('active');
+                    this.teamHistory.style.display = 'block';
+                    this.personalHistory.style.display = 'none';
+                    if (this.currentTeams.length > 0 && !this.teamHistorySelector.value) {
+                        this.updateTeamSelector(this.currentTeams);
+                    }
+                }
+            }
+
+            updateTeamSelector(teams) {
+                this.teamHistorySelector.innerHTML = '<option value="">-- Select a team --</option>' +
+                    teams.map(team => `<option value="${team.id}">${team.name}</option>`).join('');
+            }
+
+            async loadTeamHistory() {
+                const teamId = this.teamHistorySelector.value;
+                if (!teamId || !this.authToken) {
+                    this.teamHistoryList.innerHTML = `
+                        <div style="color: #6c757d; text-align: center; margin-top: 120px;">
+                            Select a team to view history
+                        </div>
+                    `;
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/search/team/${teamId}`, {
+                        headers: { 'Authorization': `Bearer ${this.authToken}` }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success && data.data) {
+                        this.renderTeamHistory(data.data);
+                    }
+                } catch (error) {
+                    console.error('Failed to load team history:', error);
+                    this.teamHistoryList.innerHTML = `
+                        <div style="color: #e74c3c; text-align: center; margin-top: 120px;">
+                            Failed to load team history
+                        </div>
+                    `;
+                }
+            }
+
+            renderTeamHistory(searches) {
+                if (searches.length === 0) {
+                    this.teamHistoryList.innerHTML = `
+                        <div style="color: #6c757d; text-align: center; margin-top: 120px;">
+                            No team searches yet
+                        </div>
+                    `;
+                    return;
+                }
+
+                this.teamHistoryList.innerHTML = searches.map(search => {
+                    const status = search.status || (search.resultCount > 0 ? 'completed' : 'processing');
+                    const resultsText = search.resultCount !== undefined ? ` (${search.resultCount} results)` : '';
+
+                    return `
+                        <div class="search-item">
+                            <div class="search-query">${search.topic}</div>
+                            <div class="search-meta">
+                                <span class="status-indicator status-${status.toLowerCase()}"></span>
+                                ${status.charAt(0).toUpperCase() + status.slice(1)}${resultsText} •
+                                ${search.userName || 'Unknown'} •
+                                ${new Date(search.createdAt).toLocaleString()}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
         // Initialize the interface
-        const debugInterface = new IRADebugInterface();
+        const debugInterface = new SearchDebugInterface();
     </script>
 </body>
 </html>

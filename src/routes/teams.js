@@ -1,11 +1,11 @@
 const { Hono } = require('hono');
 const { teamService, TeamNotFoundError, TeamAccessDeniedError, TeamValidationError } = require('../services/teamService');
 const { teamMemberService, TeamMemberNotFoundError, TeamMemberAccessDeniedError, TeamMemberValidationError } = require('../services/teamMemberService');
-const { jwtAuthMiddleware } = require('../middleware/auth');
+const { localJwtAuthMiddleware } = require('../middleware/localAuth');
 
 const teams = new Hono();
 
-teams.use('/*', jwtAuthMiddleware());
+teams.use('/*', localJwtAuthMiddleware());
 
 teams.post('/', async (c) => {
   try {

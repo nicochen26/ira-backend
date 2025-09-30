@@ -1,5 +1,6 @@
 const jwtUtil = require('../utils/jwt');
 const fetch = require('node-fetch');
+const userService = require('../services/userService');
 
 /**
  * IRA-aware JWT Authentication Middleware
@@ -45,12 +46,21 @@ const localJwtAuthMiddleware = () => {
 
             // Check if verification was successful
             if (iraData.success && iraData.data && iraData.data.valid) {
-              // Add user information from IRA to context
-              c.set('user', {
+              const userData = {
                 id: iraData.data.userId,
                 email: iraData.data.email,
-                name: iraData.data.name || 'IRA User'
-              });
+                name: iraData.data.name || 'User'
+              };
+
+              // Ensure user exists in database
+              try {
+                await userService.findOrCreateUser(userData);
+              } catch (dbError) {
+                console.warn('Failed to ensure user exists in database:', dbError.message);
+              }
+
+              // Add user information to context
+              c.set('user', userData);
 
               // Continue to next middleware/handler
               await next();
@@ -86,12 +96,21 @@ const localJwtAuthMiddleware = () => {
               }, 401);
             }
 
-            // Add user information to context from decoded payload
-            c.set('user', {
+            const userData = {
               id: payload.userId || payload.id,
               email: payload.email,
-              name: payload.name || 'IRA User'
-            });
+              name: payload.name || 'User'
+            };
+
+            // Ensure user exists in database
+            try {
+              await userService.findOrCreateUser(userData);
+            } catch (dbError) {
+              console.warn('Failed to ensure user exists in database:', dbError.message);
+            }
+
+            // Add user information to context from decoded payload
+            c.set('user', userData);
 
             // Continue to next middleware/handler
             await next();
@@ -110,12 +129,21 @@ const localJwtAuthMiddleware = () => {
         // Try local verification for non-ES256 tokens
         const decoded = jwtUtil.verifyToken(token);
 
-        // Add user information to context for use in subsequent handlers
-        c.set('user', {
+        const userData = {
           id: decoded.id,
           email: decoded.email,
           name: decoded.name
-        });
+        };
+
+        // Ensure user exists in database
+        try {
+          await userService.findOrCreateUser(userData);
+        } catch (dbError) {
+          console.warn('Failed to ensure user exists in database:', dbError.message);
+        }
+
+        // Add user information to context for use in subsequent handlers
+        c.set('user', userData);
 
         // Check if token is expiring soon
         if (jwtUtil.isTokenExpiringSoon(decoded)) {

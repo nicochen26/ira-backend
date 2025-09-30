@@ -79,8 +79,12 @@ search.get('/stream/:searchId', async (c) => {
     const user = c.get('user');
     const searchId = c.req.param('searchId');
 
+    console.log(`[SSE] Establishing connection for search ${searchId}, user ${user.id}`);
+
     // Verify search ownership
     const searchQuery = await searchService.getSearchById(searchId, user.id);
+
+    console.log(`[SSE] Search verified, creating connection...`);
 
     // Get SSE manager
     const sseManager = getSSeManager();

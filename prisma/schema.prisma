@@ -70,6 +70,8 @@ model SearchResult {
   title         String
   content       String
   score         Float?
+  resultType    String?     @map("result_type")
+  sequence      Int?
   metadata      Json?
   sourceService String      @default("ira") @map("source_service")
   createdAt     DateTime    @default(now()) @map("created_at")

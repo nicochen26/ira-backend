@@ -170,6 +170,55 @@ class UserService {
       throw error;
     }
   }
+
+  async findOrCreateUser(userData) {
+    try {
+      const prisma = dbClient.getClient();
+
+      const { id, email, name } = userData;
+
+      if (!email || !name) {
+        throw new Error('Email and name are required');
+      }
+
+      // If ID is provided, try to find or create with that ID
+      if (id) {
+        const user = await prisma.user.upsert({
+          where: { id },
+          update: {
+            email,
+            name
+          },
+          create: {
+            id,
+            email,
+            name
+          }
+        });
+        return user;
+      }
+
+      // Otherwise find by email or create
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+        return existingUser;
+      }
+
+      const user = await prisma.user.create({
+        data: {
+          email,
+          name
+        }
+      });
+
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = new UserService();
