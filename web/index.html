@@ -318,6 +318,14 @@
             align-items: flex-start;
         }
 
+        .user-info > div:first-child {
+            color: #2c3e50;
+        }
+
+        .user-button.active .user-info > div:first-child {
+            color: #1565c0;
+        }
+
         .user-email {
             font-size: 11px;
             color: #7f8c8d;
@@ -1309,9 +1317,11 @@
                 memberList.innerHTML = members.map(member => {
                     const user = this.demoUsers.find(u => u.id === member.userId);
                     const icon = user ? user.icon : '👤';
+                    // Display member's email or name from the member object, fallback to user name
+                    const displayName = member.user?.email || member.user?.name || user?.name || member.name || 'Unknown User';
                     return `
                         <div class="member-badge">
-                            <span>${icon} ${member.name}</span>
+                            <span>${icon} ${displayName}</span>
                             <span class="member-remove" onclick="debugInterface.removeMemberFromTeam('${teamId}', '${member.userId}')">×</span>
                         </div>
                     `;
