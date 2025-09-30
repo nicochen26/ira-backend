@@ -991,9 +991,100 @@
                 }).join('');
             }
 
-            selectSearch(searchId) {
-                // You could implement viewing a specific search's results here
-                console.log('Selected search:', searchId);
+            async selectSearch(searchId) {
+                if (!this.authToken) return;
+
+                try {
+                    // Highlight selected search
+                    this.currentSearchId = searchId;
+                    const searchItems = this.searchList.querySelectorAll('.search-item');
+                    searchItems.forEach(item => item.classList.remove('active'));
+                    const selectedItem = this.searchList.querySelector(`[onclick*="${searchId}"]`);
+                    if (selectedItem) selectedItem.classList.add('active');
+
+                    // Clear stream display and show loading
+                    this.streamDisplay.innerHTML = `
+                        <div style="color: #6c757d; text-align: center; padding: 20px;">
+                            Loading search results...
+                        </div>
+                    `;
+
+                    // Fetch search results
+                    const response = await fetch(`${this.baseURL}/api/search/${searchId}/results`, {
+                        headers: { 'Authorization': `Bearer ${this.authToken}` }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success && data.data) {
+                        this.displaySearchResults(data.data);
+                    } else {
+                        throw new Error(data.error || 'Failed to load search results');
+                    }
+                } catch (error) {
+                    console.error('Failed to load search results:', error);
+                    this.streamDisplay.innerHTML = `
+                        <div style="color: #e74c3c; text-align: center; padding: 20px;">
+                            Failed to load search results: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            displaySearchResults(data) {
+                const { query, createdAt, results } = data;
+
+                if (!results || results.length === 0) {
+                    this.streamDisplay.innerHTML = `
+                        <div style="color: #6c757d; text-align: center; padding: 20px;">
+                            No results found for this search
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Display query info and results
+                let html = `
+                    <div class="stream-event event-metadata">
+                        <div class="event-timestamp">${new Date(createdAt).toLocaleString()}</div>
+                        <div class="event-content"><strong>Query:</strong> ${query}</div>
+                    </div>
+                `;
+
+                results.forEach(result => {
+                    const eventType = result.resultType?.toLowerCase() || 'result';
+
+                    // Try to parse content if it looks like JSON
+                    let displayContent = result.content;
+                    try {
+                        // If content is a JSON string, try to extract meaningful text
+                        if (displayContent.startsWith('{') || displayContent.startsWith('[')) {
+                            const parsed = JSON.parse(displayContent);
+                            // If it has a content field, use that
+                            if (parsed.content) {
+                                displayContent = parsed.content;
+                            } else {
+                                // Otherwise format the JSON nicely
+                                displayContent = JSON.stringify(parsed, null, 2);
+                            }
+                        }
+                    } catch (e) {
+                        // Not JSON or failed to parse, use as-is
+                    }
+
+                    html += `
+                        <div class="stream-event event-${eventType === 'intermediate' ? 'intermediate' : eventType === 'metadata' ? 'metadata' : 'report'}">
+                            <div class="event-timestamp">${new Date(result.createdAt).toLocaleString()}</div>
+                            <div class="event-content">
+                                <strong>${result.title}</strong><br>
+                                <pre style="white-space: pre-wrap; margin: 5px 0 0 0;">${displayContent}</pre>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                this.streamDisplay.innerHTML = html;
+                this.streamDisplay.scrollTop = this.streamDisplay.scrollHeight;
             }
 
             // ===== Demo Users Methods =====

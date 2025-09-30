@@ -192,7 +192,8 @@ class SearchStreamService {
       streamInfo.sequence++;
       resultData.sequence = streamInfo.sequence;
 
-      console.log(`Processing stream event for search ${searchId}:`, resultData.type);
+      console.log(`Processing stream event for search ${searchId}:`, resultData.type,
+        'Content preview:', typeof resultData.content === 'string' ? resultData.content.substring(0, 100) : JSON.stringify(resultData.content).substring(0, 100));
 
       // Store in database
       if (resultData.type !== 'METADATA') {
