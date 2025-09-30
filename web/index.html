@@ -1032,10 +1032,45 @@
                 const activeBtn = this.userSwitcher.querySelector(`[data-user-id="${userId}"]`);
                 if (activeBtn) activeBtn.classList.add('active');
 
+                // Clear all previous user's data from UI
+                this.clearAllData();
+
                 // Always generate new token (don't use cached token)
                 this.currentUser = user;
                 localStorage.setItem('currentDemoUser', userId);
                 await this.generateTokenForUser(user);
+            }
+
+            clearAllData() {
+                // Clear search history
+                this.searchList.innerHTML = `
+                    <div style="color: #6c757d; text-align: center; margin-top: 120px;">
+                        Loading...
+                    </div>
+                `;
+
+                // Clear teams
+                this.teamsList.innerHTML = `
+                    <div style="color: #6c757d; text-align: center; padding: 20px;">
+                        Loading...
+                    </div>
+                `;
+
+                // Clear team history
+                this.teamHistoryList.innerHTML = `
+                    <div style="color: #6c757d; text-align: center; padding: 20px;">
+                        Select a team to view history
+                    </div>
+                `;
+
+                // Clear team selector
+                this.teamHistorySelector.innerHTML = '<option value="">Select a team...</option>';
+
+                // Clear stream display
+                this.streamDisplay.innerHTML = '';
+
+                // Reset current data
+                this.currentTeams = [];
             }
 
             async generateTokenForUser(user) {
