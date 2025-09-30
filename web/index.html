@@ -163,8 +163,29 @@
         }
 
         .search-list {
-            max-height: 300px;
+            max-height: 500px;
             overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        .search-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .search-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .search-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .search-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
         .search-item {
@@ -490,7 +511,6 @@
 
                     const data = (await response.json()).data;
 
-                    console.log(`Starting search response: ${response.ok} ${data.searchId} ${data.message}`);
                     if (response.ok && data.searchId) {
                         this.currentSearchId = data.searchId;
                         this.connectToStream(data.searchId);
